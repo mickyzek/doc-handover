@@ -187,6 +187,7 @@ async function api(action, params){
 // ===== STATE =====
 let AU={ga:[],mgr:[]}, PLANS=[], SIGDATA={};
 let CU=null, SU=null, PB='';
+let CPB='', CP_STEP=1, CP_NEW='';
 let RF='', HF='', GF='', SQ='', HT='dash';
 let CP=null, drawing=false, lx=0, ly=0, sctx=null, DM='select';
 let DC=null, MC=null, docCount=1;
@@ -708,36 +709,100 @@ function setGF2(n){GF=n;renderHistList();}
 function setHF(d){HF=d;renderHistList();}
 
 function renderPinChange(){
+  CPB=''; CP_STEP=1; CP_NEW='';
   document.getElementById('hist-body').innerHTML=`
-    <div class="bg-white rounded-xl card-shadow p-4">
-      <h4 class="font-semibold text-gray-900 text-sm mb-1 flex items-center gap-2"><i data-lucide="lock" class="w-4 h-4 text-brand"></i> เปลี่ยนรหัสผ่าน</h4>
-      <p class="text-xs text-gray-400 mb-4">ใส่รหัสปัจจุบันก่อน แล้วตั้งรหัสใหม่ 4 หลัก</p>
-      <label class="text-xs font-medium text-gray-500 mb-1 block">รหัสปัจจุบัน</label>
-      <input type="password" id="oPin" maxlength="4" inputmode="numeric" placeholder="••••" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand bg-gray-50/50 mb-3 text-center tracking-widest text-lg">
-      <label class="text-xs font-medium text-gray-500 mb-1 block">รหัสใหม่</label>
-      <input type="password" id="nPin" maxlength="4" inputmode="numeric" placeholder="••••" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand bg-gray-50/50 mb-3 text-center tracking-widest text-lg">
-      <label class="text-xs font-medium text-gray-500 mb-1 block">ยืนยันรหัสใหม่</label>
-      <input type="password" id="cPin" maxlength="4" inputmode="numeric" placeholder="••••" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand bg-gray-50/50 mb-3 text-center tracking-widest text-lg">
-      <div id="pinMsg" class="text-sm font-medium min-h-5 mb-3"></div>
-      <button onclick="savePin()" class="w-full py-3 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-blue-800 transition" id="sPinBtn">บันทึกรหัสใหม่</button>
-    </div>
-    <p class="text-xs text-gray-300 text-center mt-3">รหัส default = 1234</p>`;
+    <div class="flex flex-col items-center pt-4 pb-6">
+      <div class="flex items-center gap-2 mb-1">
+        <i data-lucide="lock" class="w-4 h-4 text-brand"></i>
+        <span class="font-semibold text-gray-900 text-sm">เปลี่ยนรหัสผ่าน</span>
+      </div>
+      <div class="flex gap-2 mb-6 mt-2" id="cp-steps">
+        <span id="cpstep-1" class="text-xs px-2.5 py-0.5 rounded-full font-medium bg-brand text-white">1 รหัสเก่า</span>
+        <span id="cpstep-2" class="text-xs px-2.5 py-0.5 rounded-full font-medium bg-gray-100 text-gray-400">2 รหัสใหม่</span>
+        <span id="cpstep-3" class="text-xs px-2.5 py-0.5 rounded-full font-medium bg-gray-100 text-gray-400">3 ยืนยัน</span>
+      </div>
+      <p id="cp-label" class="text-sm text-gray-500 mb-6">กรอกรหัสปัจจุบัน</p>
+      <div class="flex gap-4 mb-3" id="cp-dots">
+        <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+      </div>
+      <div id="cp-msg" class="text-sm font-medium min-h-5 mb-4 text-red-500"></div>
+      <div class="grid grid-cols-3 gap-3">
+        <div class="numpad-key" onclick="cpEnter('1')">1</div><div class="numpad-key" onclick="cpEnter('2')">2</div><div class="numpad-key" onclick="cpEnter('3')">3</div>
+        <div class="numpad-key" onclick="cpEnter('4')">4</div><div class="numpad-key" onclick="cpEnter('5')">5</div><div class="numpad-key" onclick="cpEnter('6')">6</div>
+        <div class="numpad-key" onclick="cpEnter('7')">7</div><div class="numpad-key" onclick="cpEnter('8')">8</div><div class="numpad-key" onclick="cpEnter('9')">9</div>
+        <div class="numpad-key"></div><div class="numpad-key" onclick="cpEnter('0')">0</div>
+        <div class="numpad-key" onclick="cpDelete()"><i data-lucide="delete" class="w-5 h-5 text-gray-400"></i></div>
+      </div>
+    </div>`;
   lucide.createIcons();
 }
 
-async function savePin(){
-  const old=document.getElementById('oPin').value,nw=document.getElementById('nPin').value,cf=document.getElementById('cPin').value;
-  const msg=document.getElementById('pinMsg');
-  const chk=await api('verifyPin',{name:CU.name,pin:old,role:CU.role});
-  if(!chk.ok){msg.style.color='#EF4444';msg.textContent='รหัสปัจจุบันไม่ถูกต้อง';return;}
-  if(nw.length!==4||!/^\d{4}$/.test(nw)){msg.style.color='#EF4444';msg.textContent='รหัสใหม่ต้องเป็นตัวเลข 4 หลัก';return;}
-  if(nw!==cf){msg.style.color='#EF4444';msg.textContent='รหัสใหม่ไม่ตรงกัน';return;}
-  const btn=document.getElementById('sPinBtn');btn.disabled=true;btn.textContent='กำลังบันทึก...';
-  const res=await api('changePin',{name:CU.name,newPin:nw,role:CU.role});
-  if(res.ok){document.getElementById('oPin').value='';document.getElementById('nPin').value='';document.getElementById('cPin').value='';msg.style.color='#0F6E56';msg.textContent='เปลี่ยนรหัสสำเร็จแล้ว ✓';setTimeout(()=>{msg.textContent='';},3000);}
-  else{msg.style.color='#EF4444';msg.textContent='เกิดข้อผิดพลาด';}
-  btn.disabled=false;btn.textContent='บันทึกรหัสใหม่';
+function cpUpdateDots(){
+  document.querySelectorAll('#cp-dots .pin-dot').forEach((dot,i)=>{
+    dot.classList.toggle('filled',i<CPB.length);
+    dot.classList.remove('error');
+  });
 }
+
+function cpDelete(){ CPB=CPB.slice(0,-1); cpUpdateDots(); document.getElementById('cp-msg').textContent=''; }
+
+function cpEnter(d){
+  if(CPB.length>=4) return;
+  CPB+=d; cpUpdateDots();
+  if(CPB.length===4) setTimeout(cpNext, 150);
+}
+
+async function cpNext(){
+  const msg=document.getElementById('cp-msg');
+  document.querySelectorAll('#cp-dots .pin-dot').forEach(dot=>{dot.classList.remove('error');});
+  if(CP_STEP===1){
+    // verify old PIN
+    document.querySelectorAll('#hist-body .numpad-key').forEach(b=>b.style.pointerEvents='none');
+    try{
+      const res=await api('verifyPin',{name:CU.name,pin:CPB,role:CU.role});
+      if(res.ok){
+        CP_STEP=2; CPB=''; cpUpdateDots();
+        document.getElementById('cp-label').textContent='กรอกรหัสใหม่';
+        document.getElementById('cpstep-1').className='text-xs px-2.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700';
+        document.getElementById('cpstep-2').className='text-xs px-2.5 py-0.5 rounded-full font-medium bg-brand text-white';
+      } else {
+        document.querySelectorAll('#cp-dots .pin-dot').forEach(d=>{d.classList.remove('filled');d.classList.add('error');});
+        msg.textContent='รหัสปัจจุบันไม่ถูกต้อง';
+        setTimeout(()=>{ CPB=''; cpUpdateDots(); msg.textContent=''; },700);
+      }
+    }catch(e){ msg.textContent='เกิดข้อผิดพลาด ลองใหม่'; setTimeout(()=>{ CPB=''; cpUpdateDots(); msg.textContent=''; },1200); }
+    document.querySelectorAll('#hist-body .numpad-key').forEach(b=>b.style.pointerEvents='');
+  } else if(CP_STEP===2){
+    CP_NEW=CPB; CP_STEP=3; CPB=''; cpUpdateDots();
+    document.getElementById('cp-label').textContent='ยืนยันรหัสใหม่อีกครั้ง';
+    document.getElementById('cpstep-2').className='text-xs px-2.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700';
+    document.getElementById('cpstep-3').className='text-xs px-2.5 py-0.5 rounded-full font-medium bg-brand text-white';
+  } else if(CP_STEP===3){
+    if(CPB!==CP_NEW){
+      document.querySelectorAll('#cp-dots .pin-dot').forEach(d=>{d.classList.remove('filled');d.classList.add('error');});
+      msg.textContent='รหัสไม่ตรงกัน ลองใหม่';
+      setTimeout(()=>{ CP_STEP=2; CP_NEW=''; CPB=''; cpUpdateDots(); msg.textContent='';
+        document.getElementById('cp-label').textContent='กรอกรหัสใหม่';
+        document.getElementById('cpstep-2').className='text-xs px-2.5 py-0.5 rounded-full font-medium bg-brand text-white';
+        document.getElementById('cpstep-3').className='text-xs px-2.5 py-0.5 rounded-full font-medium bg-gray-100 text-gray-400';
+      }, 700);
+      return;
+    }
+    document.querySelectorAll('#hist-body .numpad-key').forEach(b=>b.style.pointerEvents='none');
+    try{
+      const res=await api('changePin',{name:CU.name,newPin:CP_NEW,role:CU.role});
+      if(res.ok){
+        document.getElementById('cp-label').textContent='เปลี่ยนรหัสสำเร็จ ✓';
+        document.getElementById('cp-label').style.color='#0F6E56';
+        document.getElementById('cpstep-3').className='text-xs px-2.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700';
+        CPB=''; cpUpdateDots();
+        setTimeout(()=>renderPinChange(), 2000);
+      } else { msg.textContent='เกิดข้อผิดพลาด'; CPB=''; cpUpdateDots(); }
+    }catch(e){ msg.textContent='เกิดข้อผิดพลาด ลองใหม่'; CPB=''; cpUpdateDots(); }
+    document.querySelectorAll('#hist-body .numpad-key').forEach(b=>b.style.pointerEvents='');
+  }
+}
+
 
 // ===== MGR DASHBOARD =====
 function renderMgrDash(){
