@@ -287,7 +287,7 @@ async function checkPin(){
     const res=await api('login',{name:SU.name,pin:PB,role:SU.role});
     if(res.ok){
       CU={...SU};
-      PLANS=(res.plans||[]).map(p=>({id:p.plan_id,name:p.name,date:p.date,dept:p.dept,createdBy:p.created_by,status:p.status,signer:p.signer||'',ts:p.signed_at||'',docs:[],checked:[],loaded:false}));
+      PLANS=(res.plans||[]).map(p=>{if(p.sign_img)SIGDATA[p.plan_id]=p.sign_img;return{id:p.plan_id,name:p.name,date:p.date,dept:p.dept,createdBy:p.created_by,status:p.status,signer:p.signer||'',ts:p.signed_at||'',docs:[],checked:[],loaded:false};});
       toast('ยินดีต้อนรับ '+CU.name.split(' ')[0]+' 👋');
       buildMain();
       goScreen('main');
