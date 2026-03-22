@@ -170,6 +170,25 @@ canvas#signatureCanvas{touch-action:none;}
 </div>
 </div>
 
+<!-- Logout Modal -->
+<div id="logoutModal" class="fixed inset-0 flex items-end justify-center pointer-events-none opacity-0 transition-opacity duration-200" style="z-index:300;">
+  <div class="absolute inset-0 bg-black/40" onclick="closeLogoutModal()"></div>
+  <div class="relative w-full bg-white rounded-t-2xl p-6 pb-safe" style="max-width:480px;padding-bottom:max(24px,calc(env(safe-area-inset-bottom)+16px));">
+    <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5"></div>
+    <div class="flex items-center gap-3 mb-2">
+      <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+        <i data-lucide="log-out" class="w-5 h-5 text-red-500"></i>
+      </div>
+      <p class="font-semibold text-gray-900">ออกจากระบบ?</p>
+    </div>
+    <p class="text-sm text-gray-400 mb-6 pl-13" style="padding-left:52px;">ข้อมูลที่ยังไม่ได้บันทึกจะหายไป</p>
+    <div class="flex gap-3">
+      <button onclick="closeLogoutModal()" class="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">ยกเลิก</button>
+      <button onclick="logout()" class="flex-1 py-3 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition">ออกจากระบบ</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast" class="fixed left-1/2 -translate-x-1/2 px-5 py-3 bg-gray-900 text-white text-sm font-medium rounded-xl card-shadow-md transition-all duration-300 opacity-0 pointer-events-none" style="bottom:max(24px, calc(env(safe-area-inset-bottom) + 16px));z-index:200;max-width:360px;font-family:'Noto Sans Thai',sans-serif;"></div>
 
@@ -291,19 +310,18 @@ function selectUser(name, role){
   goScreen('pin'); lucide.createIcons();
 }
 
-let _logoutConfirm=false;
 function confirmLogout(){
-  const btn=document.getElementById('logoutBtn');
-  if(!_logoutConfirm){
-    _logoutConfirm=true;
-    btn.innerHTML='<i data-lucide="alert-triangle" class="w-4 h-4 text-warn"></i>';
-    lucide.createIcons();
-    setTimeout(()=>{if(_logoutConfirm){_logoutConfirm=false;btn.innerHTML='<i data-lucide="log-out" class="w-4 h-4 text-gray-400"></i>';lucide.createIcons();}},2500);
-    return;
-  }
-  logout();
+  const m=document.getElementById('logoutModal');
+  m.classList.remove('pointer-events-none','opacity-0');
+  m.classList.add('pointer-events-auto','opacity-100');
+  lucide.createIcons();
 }
-function logout(){_logoutConfirm=false;CU=null;SU=null;PLANS=[];_plansPrefetch=null;goScreen('login');lucide.createIcons();}
+function closeLogoutModal(){
+  const m=document.getElementById('logoutModal');
+  m.classList.add('pointer-events-none','opacity-0');
+  m.classList.remove('pointer-events-auto','opacity-100');
+}
+function logout(){closeLogoutModal();CU=null;SU=null;PLANS=[];_plansPrefetch=null;goScreen('login');lucide.createIcons();}
 
 // ===== SKELETON =====
 function skeletonCards(n){
