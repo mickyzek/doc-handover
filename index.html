@@ -184,6 +184,12 @@ async function api(action, params){
   return data;
 }
 
+// ===== CACHE =====
+const CACHE_TTL = 10 * 60 * 1000; // 10 นาที
+function cacheSet(key, val){ try{ localStorage.setItem(key, JSON.stringify({t:Date.now(), v:val})); }catch(e){} }
+function cacheGet(key){ try{ const c=JSON.parse(localStorage.getItem(key)||'null'); if(c&&Date.now()-c.t<CACHE_TTL)return c.v; }catch(e){} return null; }
+function cacheDel(key){ try{ localStorage.removeItem(key); }catch(e){} }
+
 // ===== STATE =====
 let AU={ga:[],mgr:[]}, PLANS=[], SIGDATA={};
 let CU=null, SU=null, PB=''
@@ -220,9 +226,12 @@ function goScreen(name){
 // ===== INIT =====
 async function init(){
   goScreen('loading');
+  const cached=cacheGet('users');
+  if(cached){ AU=cached; buildLoginScreen(); goScreen('login'); lucide.createIcons(); api('getUsers').then(d=>{cacheSet('users',d);}).catch(()=>{}); return; }
   document.getElementById('loadingMsg').textContent='กำลังดึงข้อมูลผู้ใช้...';
   try{
     AU = await api('getUsers');
+    cacheSet('users', AU);
     buildLoginScreen();
     goScreen('login');
     lucide.createIcons();
@@ -284,13 +293,16 @@ function updatePinDots(){document.querySelectorAll('#pin-dots .pin-dot').forEach
 async function checkPin(){
   document.querySelectorAll('#screen-pin .numpad-key').forEach(b=>b.style.pointerEvents='none');
   try{
-    const [res,plans]=await Promise.all([
-      api('verifyPin',{name:SU.name,pin:PB,role:SU.role}),
-      api('getPlans',{name:SU.name,role:SU.role})
-    ]);
+    const planCacheKey='plans:'+SU.name+':'+SU.role;
+    const cachedPlans=cacheGet(planCacheKey);
+    const verifyProm=api('verifyPin',{name:SU.name,pin:PB,role:SU.role});
+    const plansProm=cachedPlans?Promise.resolve(cachedPlans):api('getPlans',{name:SU.name,role:SU.role});
+    const [res,plans]=await Promise.all([verifyProm,plansProm]);
     if(res.ok){
       CU={...SU};
       PLANS=(plans||[]).map(p=>{if(p.sign_img)SIGDATA[p.plan_id]=p.sign_img;return{id:p.plan_id,name:p.name,date:p.date,dept:p.dept,createdBy:p.created_by,status:p.status,signer:p.signer||'',ts:p.signed_at||'',docs:[],checked:[],loaded:false};});
+      if(cachedPlans){api('getPlans',{name:CU.name,role:CU.role}).then(d=>{cacheSet(planCacheKey,d);}).catch(()=>{});}
+      else{cacheSet(planCacheKey,plans);}
       toast('ยินดีต้อนรับ '+CU.name.split(' ')[0]+' 👋');
       buildMain();
       goScreen('main');
@@ -318,7 +330,10 @@ async function loadPlans(){
 async function loadDocs(pid){
   const p=PLANS.find(x=>x.id===pid); if(!p||p.loaded)return;
   try{
-    const docs=await api('getDocs',{plan_id:pid});
+    const ckey='docs:'+pid;
+    const cached=cacheGet(ckey);
+    const docs=cached||await api('getDocs',{plan_id:pid});
+    if(!cached)cacheSet(ckey,docs);
     p.docs=docs.map(d=>({no:String(d.doc_no||''),vendor:String(d.vendor||''),desc:String(d.description||''),amount:Number(d.amount)||0}));
     p.checked=docs.map(d=>d.is_received==='true'||d.is_received===true);
     p.loaded=true;
@@ -457,6 +472,7 @@ async function submitPlan(){
     const res=await api('createPlan',{name,date:date||new Date().toISOString().slice(0,10),dept,created_by:CU.name,docs});
     if(res.ok){
       PLANS.unshift({id:res.plan_id,name,date:date||new Date().toISOString().slice(0,10),dept,createdBy:CU.name,status:'ready',signer:'',ts:'',docs,checked:docs.map(()=>false),loaded:true});
+      cacheDel('plans:'+CU.name+':'+CU.role);
       toast('ส่งเอกสารเรียบร้อยแล้ว ✓');
       renderSend();
     }
@@ -577,6 +593,8 @@ async function submitReceive(){
   try{
     await api('receipt',{plan_id:CP.id,status,signer:name,sign_img:sig,signed_at:ts,checked:CP.docs.map((d,i)=>({no:d.no,received:CP.checked[i]}))});
     CP.status=status; CP.signer=name; CP.ts=ts;
+    cacheDel('docs:'+CP.id);
+    cacheDel('plans:'+CU.name+':'+CU.role);
     toast(all?'ยืนยันรับครบทุกรายการแล้ว ✓':'บันทึกรับบางส่วนแล้ว ✓');
     closeReceiveDetail();
   }catch(e){toast('เกิดข้อผิดพลาด ลองใหม่');}
