@@ -290,7 +290,7 @@ async function checkPin(){
     ]);
     if(res.ok){
       CU={...SU};
-      PLANS=(plans||[]).map(p=>({id:p.plan_id,name:p.name,date:p.date,dept:p.dept,createdBy:p.created_by,status:p.status,signer:p.signer||'',ts:p.signed_at||'',docs:[],checked:[],loaded:false}));
+      PLANS=(plans||[]).map(p=>{if(p.sign_img)SIGDATA[p.plan_id]=p.sign_img;return{id:p.plan_id,name:p.name,date:p.date,dept:p.dept,createdBy:p.created_by,status:p.status,signer:p.signer||'',ts:p.signed_at||'',docs:[],checked:[],loaded:false};});
       toast('ยินดีต้อนรับ '+CU.name.split(' ')[0]+' 👋');
       buildMain();
       goScreen('main');
@@ -312,12 +312,7 @@ async function checkPin(){
 async function loadPlans(){
   document.getElementById('loadingMsg').textContent='';
   const res=await api('getPlans',{name:CU.name,role:CU.role});
-  PLANS=res.map(p=>({
-    id:p.plan_id,name:p.name,date:p.date,dept:p.dept,
-    createdBy:p.created_by,status:p.status,
-    signer:p.signer||'',ts:p.signed_at||'',
-    docs:[],checked:[],loaded:false
-  }));
+  PLANS=res.map(p=>{if(p.sign_img)SIGDATA[p.plan_id]=p.sign_img;return{id:p.plan_id,name:p.name,date:p.date,dept:p.dept,createdBy:p.created_by,status:p.status,signer:p.signer||'',ts:p.signed_at||'',docs:[],checked:[],loaded:false};});
 }
 
 async function loadDocs(pid){
