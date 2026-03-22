@@ -329,7 +329,8 @@ async function loadDocs(pid){
 }
 
 async function loadAllDocsBackground(){
-  for(const p of PLANS.filter(x=>!x.loaded)) await loadDocs(p.id);
+  await Promise.all(PLANS.filter(x=>!x.loaded).map(p=>loadDocs(p.id)));
+  if(HT==='list')renderHistList();
 }
 
 // ===== MAIN UI =====
@@ -697,7 +698,7 @@ function renderHistList(){
         (d.vendor||'').toLowerCase().includes(q)||
         (d.desc||'').toLowerCase().includes(q)
       );
-      return false;
+      return true; // ยังไม่โหลด docs — คงไว้ก่อน (background กำลังโหลด)
     });
   }
 
