@@ -196,6 +196,7 @@ let CU=null, SU=null, PB='';
 let PIN_ATTEMPTS=0, PIN_LOCKED_UNTIL=0;
 const PIN_MAX_ATTEMPTS=5, PIN_LOCK_MS=60000;
 let rdConfirmState=false;
+let _plansPrefetch=null;
 let CPB='', CP_STEP=1, CP_NEW='';
 let RF='', HF='', GF='', SQ='', HT='dash';
 let CP=null, drawing=false, lx=0, ly=0, sctx=null, DM='select';
@@ -274,6 +275,10 @@ function selectUser(name, role){
   const idx=list.findIndex(u=>u.name===name);
   const a=avc(role==='ga'?idx:idx+4);
   SU={name,role,av:a}; PIN_ATTEMPTS=0; PIN_LOCKED_UNTIL=0;
+  // Pre-fetch plans while user types PIN
+  const _pk='plans:'+name+':'+role;
+  const _cached=cacheGet(_pk);
+  _plansPrefetch=_cached?Promise.resolve(_cached):api('getPlans',{name,role}).then(d=>{cacheSet(_pk,d);return d;}).catch(()=>null);
   // set PIN screen
   const av=document.getElementById('pin-avatar');
   av.className=`w-16 h-16 rounded-full ${a.bg} ${a.tc} flex items-center justify-center font-bold text-lg mb-3`;
@@ -305,7 +310,7 @@ async function checkPin(){
     const planCacheKey='plans:'+SU.name+':'+SU.role;
     const cachedPlans=cacheGet(planCacheKey);
     const verifyProm=api('verifyPin',{name:SU.name,pin:PB,role:SU.role});
-    const plansProm=cachedPlans?Promise.resolve(cachedPlans):api('getPlans',{name:SU.name,role:SU.role});
+    const plansProm=_plansPrefetch||(cachedPlans?Promise.resolve(cachedPlans):api('getPlans',{name:SU.name,role:SU.role}));
     const [res,plans]=await Promise.all([verifyProm,plansProm]);
     if(res.ok){
       PIN_ATTEMPTS=0;
