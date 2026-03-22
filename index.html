@@ -284,10 +284,12 @@ function updatePinDots(){document.querySelectorAll('#pin-dots .pin-dot').forEach
 async function checkPin(){
   document.querySelectorAll('#screen-pin .numpad-key').forEach(b=>b.style.pointerEvents='none');
   try{
-    const res=await api('verifyPin',{name:SU.name,pin:PB,role:SU.role});
+    const [res,plans]=await Promise.all([
+      api('verifyPin',{name:SU.name,pin:PB,role:SU.role}),
+      api('getPlans',{name:SU.name,role:SU.role})
+    ]);
     if(res.ok){
       CU={...SU};
-      const plans=await api('getPlans',{name:CU.name,role:CU.role});
       PLANS=(plans||[]).map(p=>({id:p.plan_id,name:p.name,date:p.date,dept:p.dept,createdBy:p.created_by,status:p.status,signer:p.signer||'',ts:p.signed_at||'',docs:[],checked:[],loaded:false}));
       toast('ยินดีต้อนรับ '+CU.name.split(' ')[0]+' 👋');
       buildMain();
