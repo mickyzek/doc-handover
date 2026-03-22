@@ -173,7 +173,7 @@ canvas#signatureCanvas{touch-action:none;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
 // ===== CONFIG =====
-const API = '<?= ScriptApp.getService().getUrl() ?>';
+const API = 'https://script.google.com/macros/s/AKfycbxfR20dqavySzLA6shr-4mAeVXqMxYp59H_VuMbgc_BpSB5wRNl9p4h8Owm1NPBVref/exec';
 
 // ===== API =====
 async function api(action, params){
@@ -183,6 +183,12 @@ async function api(action, params){
   if(data.error) throw new Error(data.error);
   return data;
 }
+
+// ===== CACHE =====
+const CACHE_TTL = 10 * 60 * 1000; // 10 นาที
+function cacheSet(key, val){ try{ localStorage.setItem(key, JSON.stringify({t:Date.now(), v:val})); }catch(e){} }
+function cacheGet(key){ try{ const c=JSON.parse(localStorage.getItem(key)||'null'); if(c&&Date.now()-c.t<CACHE_TTL)return c.v; }catch(e){} return null; }
+function cacheDel(key){ try{ localStorage.removeItem(key); }catch(e){} }
 
 // ===== STATE =====
 let AU={ga:[],mgr:[]}, PLANS=[], SIGDATA={};
@@ -223,9 +229,12 @@ function goScreen(name){
 // ===== INIT =====
 async function init(){
   goScreen('loading');
+  const cached=cacheGet('users');
+  if(cached){ AU=cached; buildLoginScreen(); goScreen('login'); lucide.createIcons(); api('getUsers').then(d=>{cacheSet('users',d);}).catch(()=>{}); return; }
   document.getElementById('loadingMsg').textContent='กำลังดึงข้อมูลผู้ใช้...';
   try{
     AU = await api('getUsers');
+    cacheSet('users', AU);
     buildLoginScreen();
     goScreen('login');
     lucide.createIcons();
@@ -293,11 +302,17 @@ async function checkPin(){
   }
   document.querySelectorAll('#screen-pin .numpad-key').forEach(b=>b.style.pointerEvents='none');
   try{
-    const res=await api('login',{name:SU.name,pin:PB,role:SU.role});
+    const planCacheKey='plans:'+SU.name+':'+SU.role;
+    const cachedPlans=cacheGet(planCacheKey);
+    const verifyProm=api('verifyPin',{name:SU.name,pin:PB,role:SU.role});
+    const plansProm=cachedPlans?Promise.resolve(cachedPlans):api('getPlans',{name:SU.name,role:SU.role});
+    const [res,plans]=await Promise.all([verifyProm,plansProm]);
     if(res.ok){
       PIN_ATTEMPTS=0;
       CU={...SU};
-      PLANS=(res.plans||[]).map(p=>{if(p.sign_img)SIGDATA[p.plan_id]=p.sign_img;return{id:p.plan_id,name:p.name,date:p.date,dept:p.dept,createdBy:p.created_by,status:p.status,signer:p.signer||'',ts:p.signed_at||'',docs:[],checked:[],loaded:false};});
+      PLANS=(plans||[]).map(p=>{if(p.sign_img)SIGDATA[p.plan_id]=p.sign_img;return{id:p.plan_id,name:p.name,date:p.date,dept:p.dept,createdBy:p.created_by,status:p.status,signer:p.signer||'',ts:p.signed_at||'',docs:[],checked:[],loaded:false};});
+      if(cachedPlans){api('getPlans',{name:CU.name,role:CU.role}).then(d=>{cacheSet(planCacheKey,d);}).catch(()=>{});}
+      else{cacheSet(planCacheKey,plans);}
       toast('ยินดีต้อนรับ '+CU.name.split(' ')[0]+' 👋');
       buildMain();
       goScreen('main');
@@ -328,24 +343,25 @@ async function checkPin(){
 async function loadPlans(){
   document.getElementById('loadingMsg').textContent='';
   const res=await api('getPlans',{name:CU.name,role:CU.role});
-  PLANS=res.map(p=>({
-    id:p.plan_id,name:p.name,date:p.date,dept:p.dept,
-    createdBy:p.created_by,status:p.status,
-    signer:p.signer||'',ts:p.signed_at||'',
-    docs:[],checked:[],loaded:false
-  }));
+  PLANS=res.map(p=>{if(p.sign_img)SIGDATA[p.plan_id]=p.sign_img;return{id:p.plan_id,name:p.name,date:p.date,dept:p.dept,createdBy:p.created_by,status:p.status,signer:p.signer||'',ts:p.signed_at||'',docs:[],checked:[],loaded:false};});
 }
 
 async function loadDocs(pid){
   const p=PLANS.find(x=>x.id===pid); if(!p||p.loaded)return;
-  const docs=await api('getDocs',{plan_id:pid});
-  p.docs=docs.map(d=>({no:d.doc_no,vendor:d.vendor,desc:d.description,amount:Number(d.amount)||0}));
-  p.checked=docs.map(d=>d.is_received==='true'||d.is_received===true);
-  p.loaded=true;
+  try{
+    const ckey='docs:'+pid;
+    const cached=cacheGet(ckey);
+    const docs=cached||await api('getDocs',{plan_id:pid});
+    if(!cached)cacheSet(ckey,docs);
+    p.docs=docs.map(d=>({no:String(d.doc_no||''),vendor:String(d.vendor||''),desc:String(d.description||''),amount:Number(d.amount)||0}));
+    p.checked=docs.map(d=>d.is_received==='true'||d.is_received===true);
+    p.loaded=true;
+  }catch(e){console.warn('loadDocs failed',pid,e);}
 }
 
 async function loadAllDocsBackground(){
-  for(const p of PLANS.filter(x=>!x.loaded)) await loadDocs(p.id);
+  await Promise.allSettled(PLANS.filter(x=>!x.loaded).map(p=>loadDocs(p.id)));
+  if(HT==='list')renderHistList();
 }
 
 // ===== MAIN UI =====
@@ -475,6 +491,7 @@ async function submitPlan(){
     const res=await api('createPlan',{name,date:date||new Date().toISOString().slice(0,10),dept,created_by:CU.name,docs});
     if(res.ok){
       PLANS.unshift({id:res.plan_id,name,date:date||new Date().toISOString().slice(0,10),dept,createdBy:CU.name,status:'ready',signer:'',ts:'',docs,checked:docs.map(()=>false),loaded:true});
+      cacheDel('plans:'+CU.name+':'+CU.role);
       toast('ส่งเอกสารเรียบร้อยแล้ว ✓');
       renderSend();
     }
@@ -624,6 +641,8 @@ async function submitReceive(){
   try{
     await api('receipt',{plan_id:CP.id,status,signer:name,sign_img:sig,signed_at:ts,checked:CP.docs.map((d,i)=>({no:d.no,received:CP.checked[i]}))});
     CP.status=status; CP.signer=name; CP.ts=ts;
+    cacheDel('docs:'+CP.id);
+    cacheDel('plans:'+CU.name+':'+CU.role);
     toast(all?'ยืนยันรับครบทุกรายการแล้ว ✓':'บันทึกรับบางส่วนแล้ว ✓');
     closeReceiveDetail();
   }catch(e){toast('เกิดข้อผิดพลาด ลองใหม่');}
@@ -797,7 +816,11 @@ function renderHistList(){
   }
 }
 
-function setSQ(v){SQ=v;renderHistList();}
+function setSQ(v){
+  SQ=v;
+  renderHistList();
+  if(v&&PLANS.some(p=>!p.loaded))loadAllDocsBackground();
+}
 function setGF2(n){GF=n;renderHistList();}
 function setHF(d){HF=d;renderHistList();}
 
@@ -835,6 +858,64 @@ function cpUpdateDots(){
     dot.classList.toggle('filled',i<CPB.length);
     dot.classList.remove('error');
   });
+}
+
+function cpDelete(){ CPB=CPB.slice(0,-1); cpUpdateDots(); document.getElementById('cp-msg').textContent=''; }
+
+function cpEnter(d){
+  if(CPB.length>=4) return;
+  CPB+=d; cpUpdateDots();
+  if(CPB.length===4) setTimeout(cpNext, 150);
+}
+
+async function cpNext(){
+  const msg=document.getElementById('cp-msg');
+  document.querySelectorAll('#cp-dots .pin-dot').forEach(dot=>{dot.classList.remove('error');});
+  if(CP_STEP===1){
+    document.querySelectorAll('#hist-body .numpad-key').forEach(b=>b.style.pointerEvents='none');
+    try{
+      const res=await api('verifyPin',{name:CU.name,pin:CPB,role:CU.role});
+      if(res.ok){
+        CP_STEP=2; CPB=''; cpUpdateDots();
+        document.getElementById('cp-label').textContent='กรอกรหัสใหม่';
+        document.getElementById('cpstep-1').className='text-xs px-2.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700';
+        document.getElementById('cpstep-2').className='text-xs px-2.5 py-0.5 rounded-full font-medium bg-brand text-white';
+      } else {
+        document.querySelectorAll('#cp-dots .pin-dot').forEach(d=>{d.classList.remove('filled');d.classList.add('error');});
+        msg.textContent='รหัสปัจจุบันไม่ถูกต้อง';
+        setTimeout(()=>{ CPB=''; cpUpdateDots(); msg.textContent=''; },700);
+      }
+    }catch(e){ msg.textContent='เกิดข้อผิดพลาด ลองใหม่'; setTimeout(()=>{ CPB=''; cpUpdateDots(); msg.textContent=''; },1200); }
+    document.querySelectorAll('#hist-body .numpad-key').forEach(b=>b.style.pointerEvents='');
+  } else if(CP_STEP===2){
+    CP_NEW=CPB; CP_STEP=3; CPB=''; cpUpdateDots();
+    document.getElementById('cp-label').textContent='ยืนยันรหัสใหม่อีกครั้ง';
+    document.getElementById('cpstep-2').className='text-xs px-2.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700';
+    document.getElementById('cpstep-3').className='text-xs px-2.5 py-0.5 rounded-full font-medium bg-brand text-white';
+  } else if(CP_STEP===3){
+    if(CPB!==CP_NEW){
+      document.querySelectorAll('#cp-dots .pin-dot').forEach(d=>{d.classList.remove('filled');d.classList.add('error');});
+      msg.textContent='รหัสไม่ตรงกัน ลองใหม่';
+      setTimeout(()=>{ CP_STEP=2; CP_NEW=''; CPB=''; cpUpdateDots(); msg.textContent='';
+        document.getElementById('cp-label').textContent='กรอกรหัสใหม่';
+        document.getElementById('cpstep-2').className='text-xs px-2.5 py-0.5 rounded-full font-medium bg-brand text-white';
+        document.getElementById('cpstep-3').className='text-xs px-2.5 py-0.5 rounded-full font-medium bg-gray-100 text-gray-400';
+      }, 700);
+      return;
+    }
+    document.querySelectorAll('#hist-body .numpad-key').forEach(b=>b.style.pointerEvents='none');
+    try{
+      const res=await api('changePin',{name:CU.name,newPin:CP_NEW,role:CU.role});
+      if(res.ok){
+        document.getElementById('cp-label').textContent='เปลี่ยนรหัสสำเร็จ ✓';
+        document.getElementById('cp-label').style.color='#0F6E56';
+        document.getElementById('cpstep-3').className='text-xs px-2.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700';
+        CPB=''; cpUpdateDots();
+        setTimeout(()=>renderPinChange(), 2000);
+      } else { msg.textContent='เกิดข้อผิดพลาด'; CPB=''; cpUpdateDots(); }
+    }catch(e){ msg.textContent='เกิดข้อผิดพลาด ลองใหม่'; CPB=''; cpUpdateDots(); }
+    document.querySelectorAll('#hist-body .numpad-key').forEach(b=>b.style.pointerEvents='');
+  }
 }
 
 function cpDelete(){ CPB=CPB.slice(0,-1); cpUpdateDots(); document.getElementById('cp-msg').textContent=''; }
