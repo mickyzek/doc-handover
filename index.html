@@ -1138,6 +1138,11 @@
         goScreen('receive-detail');
         await loadDocs(id);
       }
+      // Load previous signature for partial plans
+      if (CP.signer && !SIGDATA[id]) {
+        const sig = await api('getSign', { plan_id: id });
+        if (sig) SIGDATA[id] = sig;
+      }
       const p = CP, tot = p.docs.reduce((a, d) => a + (d.amount || 0), 0);
       document.getElementById('rdModal-name').textContent = p.name;
       document.getElementById('rdModal-meta').textContent = `${p.dept} • ${p.docs.length} รายการ`;
@@ -1160,7 +1165,8 @@
       <h4 class="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2"><i data-lucide="pen-tool" class="w-4 h-4 text-brand"></i> ลงนามผู้รับ</h4>
       <label class="text-xs font-medium text-gray-500 mb-1.5 block">ชื่อผู้รับเอกสาร</label>
       <input type="text" id="signerName" placeholder="พิมพ์ชื่อผู้รับ" value="${he(p.signer)}" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand bg-gray-50/50 mb-3">
-      <label class="text-xs font-medium text-gray-500 mb-1.5 block">ลายเซ็น</label>
+      ${SIGDATA[p.id] ? `<label class="text-xs font-medium text-gray-500 mb-1 block">ลายเซ็นครั้งก่อน (${he(p.signer)})</label><div class="border border-gray-100 rounded-lg overflow-hidden bg-gray-50 mb-3"><img src="${SIGDATA[p.id]}" style="width:100%;height:60px;object-fit:contain;"></div>` : ''}
+      <label class="text-xs font-medium text-gray-500 mb-1.5 block">ลายเซ็นใหม่</label>
       <div class="relative border border-gray-200 rounded-lg overflow-hidden bg-gray-50/50">
         <canvas id="signatureCanvas" width="400" height="160" class="w-full" style="height:140px;"></canvas>
         <button onclick="clearSign()" class="absolute top-2 right-2 px-2.5 py-1 bg-white rounded-md text-xs text-gray-400 hover:text-gray-600 card-shadow transition">ล้าง</button>
@@ -1227,7 +1233,12 @@
       }
       rdConfirmState = false;
       const canvas = document.getElementById('signatureCanvas');
-      const sig = (canvas && !isCanvasBlank(canvas)) ? canvas.toDataURL() : '';
+      const sig = (canvas && !isCanvasBlank(canvas)) ? canvas.toDataURL('image/jpeg', 0.6) : '';
+      if (sig && sig.length > 200000) {
+        toast('ลายเซ็นมีขนาดใหญ่เกินไป กรุณาล้างแล้ววาดใหม่');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; lucide.createIcons(); }
+        return;
+      }
       if (sig) SIGDATA[CP.id] = sig;
       const all = CP.checked.every(Boolean), status = all ? 'done' : 'partial';
       const now = new Date();
@@ -1413,10 +1424,14 @@
       }
     }
 
+    let _sqTimer = null;
     function setSQ(v) {
       SQ = v;
-      renderHistList();
-      if (v && PLANS.some(p => !p.loaded)) loadAllDocsBackground();
+      clearTimeout(_sqTimer);
+      _sqTimer = setTimeout(() => {
+        renderHistList();
+        if (v && PLANS.some(p => !p.loaded)) loadAllDocsBackground();
+      }, 250);
     }
     function setGF2(n) { GF = n; renderHistList(); }
     function setHF(d) { HF = d; renderHistList(); }
