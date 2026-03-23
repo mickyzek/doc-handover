@@ -689,6 +689,7 @@
     }
 
     // ===== INIT =====
+    let _initRetries = 0;
     async function init() {
       goScreen('loading');
       const cached = cacheGet('users');
@@ -701,8 +702,13 @@
         goScreen('login');
         lucide.createIcons();
       } catch (e) {
-        document.getElementById('loadingMsg').textContent = 'เชื่อมต่อไม่ได้ กรุณาลองใหม่...';
-        setTimeout(() => init(), 3000);
+        _initRetries++;
+        if (_initRetries >= 5) {
+          document.getElementById('loadingMsg').textContent = 'ไม่สามารถเชื่อมต่อได้ กรุณารีเฟรชหน้า';
+        } else {
+          document.getElementById('loadingMsg').textContent = `เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง... (${_initRetries}/5)`;
+          setTimeout(() => init(), 3000);
+        }
       }
     }
 
@@ -735,7 +741,10 @@
       const list = role === 'ga' ? AU.ga : AU.mgr;
       const idx = list.findIndex(u => u.name === name);
       const a = avc(role === 'ga' ? idx : idx + 4);
-      SU = { name, role, av: a }; PIN_ATTEMPTS = 0; PIN_LOCKED_UNTIL = 0;
+      SU = { name, role, av: a }; PIN_ATTEMPTS = 0;
+      const _lockKey = 'pin_lock:' + name;
+      const _storedLock = parseInt(localStorage.getItem(_lockKey) || '0');
+      PIN_LOCKED_UNTIL = _storedLock > Date.now() ? _storedLock : 0;
       // Pre-fetch plans while user types PIN
       const _pk = 'plans:' + name + ':' + role;
       const _cached = cacheGet(_pk);
@@ -862,6 +871,7 @@
           const remaining = PIN_MAX_ATTEMPTS - PIN_ATTEMPTS;
           if (PIN_ATTEMPTS >= PIN_MAX_ATTEMPTS) {
             PIN_LOCKED_UNTIL = Date.now() + PIN_LOCK_MS;
+            try { localStorage.setItem('pin_lock:' + SU.name, PIN_LOCKED_UNTIL); } catch (e) {}
             document.getElementById('pin-error').textContent = `ล็อกชั่วคราว ${PIN_LOCK_MS / 1000} วินาที`;
           } else {
             document.getElementById('pin-error').textContent = `PIN ไม่ถูกต้อง (เหลือ ${remaining} ครั้ง)`;
@@ -1032,6 +1042,9 @@
       const dept = deptSel === '__other__' ? document.getElementById('pDeptOther').value.trim() : deptSel;
       const docs = getDocItems();
       if (!name) { toast('กรุณาใส่ชื่อแผน'); return; }
+      if (name.length > 100) { toast('ชื่อแผนยาวเกินไป (สูงสุด 100 ตัวอักษร)'); return; }
+      if (!dept) { toast('กรุณาระบุแผนก'); return; }
+      if (dept.length > 50) { toast('ชื่อแผนกยาวเกินไป (สูงสุด 50 ตัวอักษร)'); return; }
       if (!dept) { toast('กรุณาเลือกแผนกปลายทาง'); return; }
       if (!docs.length) { toast('กรุณาเพิ่มอย่างน้อย 1 เอกสาร'); return; }
       const btn = document.getElementById('submitBtn'); btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
@@ -1043,7 +1056,7 @@
           toast('ส่งเอกสารเรียบร้อยแล้ว ✓');
           renderSend();
         }
-      } catch (e) { toast('เกิดข้อผิดพลาด ลองใหม่'); }
+      } catch (e) { toast('ส่งเอกสารไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่'); }
       if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="send" class="w-4 h-4"></i> ส่งเอกสาร'; }
       lucide.createIcons();
     }
@@ -1143,8 +1156,7 @@
       }
       // Load previous signature for partial plans
       if (CP.signer && !SIGDATA[id]) {
-        const sig = await api('getSign', { plan_id: id });
-        if (sig) SIGDATA[id] = sig;
+        try { const sig = await api('getSign', { plan_id: id }); if (sig) SIGDATA[id] = sig; } catch (e) { /* ไม่มี sig ไม่ crash */ }
       }
       const p = CP, tot = p.docs.reduce((a, d) => a + (d.amount || 0), 0);
       document.getElementById('rdModal-name').textContent = p.name;
@@ -1203,7 +1215,7 @@
       sctx = c.getContext('2d');
       sctx.scale(dpr, dpr);
       sctx.strokeStyle = '#1E293B'; sctx.lineWidth = 2; sctx.lineCap = 'round'; sctx.lineJoin = 'round';
-      const pos = e => { const rc = c.getBoundingClientRect(), src = e.touches ? e.touches[0] : e; return [src.clientX - rc.left, src.clientY - rc.top]; };
+      const pos = e => { const rc = c.getBoundingClientRect(), src = e.touches?.[0] ?? e; return [src.clientX - rc.left, src.clientY - rc.top]; };
       c.onpointerdown = e => { drawing = true; const [x, y] = pos(e); sctx.beginPath(); sctx.moveTo(x, y); };
       c.onpointermove = e => { if (!drawing) return; const [x, y] = pos(e); sctx.lineTo(x, y); sctx.stroke(); };
       c.onpointerup = c.onpointerleave = () => drawing = false;
@@ -1236,7 +1248,8 @@
       }
       rdConfirmState = false;
       const canvas = document.getElementById('signatureCanvas');
-      const sig = (canvas && !isCanvasBlank(canvas)) ? canvas.toDataURL('image/jpeg', 0.6) : '';
+      let sig = '';
+      try { sig = (canvas && !isCanvasBlank(canvas)) ? canvas.toDataURL('image/jpeg', 0.6) : ''; } catch (e) { toast('ไม่สามารถบันทึกลายเซ็นได้ กรุณาลองใหม่'); return; }
       if (sig && sig.length > 200000) {
         toast('ลายเซ็นมีขนาดใหญ่เกินไป กรุณาล้างแล้ววาดใหม่');
         if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; lucide.createIcons(); }
@@ -1254,7 +1267,7 @@
         cacheDel('plans:' + CU.name + ':' + CU.role);
         toast(all ? 'ยืนยันรับครบทุกรายการแล้ว ✓' : 'บันทึกรับบางส่วนแล้ว ✓');
         closeReceiveDetail();
-      } catch (e) { toast('เกิดข้อผิดพลาด ลองใหม่'); }
+      } catch (e) { toast('บันทึกการรับไม่สำเร็จ กรุณาลองใหม่'); }
     }
 
     // ===== HISTORY TAB =====
@@ -1601,8 +1614,7 @@
       if (!CP) { toast('ไม่พบแผนงาน'); return; }
       if (!CP.loaded) { toast('กำลังโหลด...'); await loadDocs(id); }
       if (CP.signer && !SIGDATA[id]) {
-        const sig = await api('getSign', { plan_id: id });
-        if (sig) SIGDATA[id] = sig;
+        try { const sig = await api('getSign', { plan_id: id }); if (sig) SIGDATA[id] = sig; } catch (e) { /* ไม่มี sig ไม่ crash */ }
       }
       const p = CP, hasSig = SIGDATA[id];
       const tot = p.docs.reduce((a, d) => a + (d.amount || 0), 0);
@@ -1676,7 +1688,7 @@
           closeBatch();
           renderHistory();
         }
-      } catch (e) { toast('เกิดข้อผิดพลาด ลองใหม่'); }
+      } catch (e) { toast('ลบแผนงานไม่สำเร็จ กรุณาลองใหม่'); }
       btn.disabled = false; btn.textContent = 'ลบเลย';
     }
 
@@ -1737,7 +1749,7 @@
       const role = document.getElementById('newUserRole').value;
       const pin = document.getElementById('newUserPin').value.trim();
       if (!name || !pin) { toast('กรุณากรอกข้อมูลให้ครบ'); return; }
-      if (pin.length !== 6) { toast('PIN ต้องเป็นตัวเลข 6 หลัก'); return; }
+      if (!/^\d{6}$/.test(pin)) { toast('PIN ต้องเป็นตัวเลข 6 หลักเท่านั้น'); return; }
       const allUsers = [...(AU.ga || []), ...(AU.mgr || [])];
       if (allUsers.some(u => u.name === name)) { toast('มีชื่อ "' + name + '" อยู่แล้ว'); return; }
       const btn = document.getElementById('addUserBtn');
@@ -1752,7 +1764,7 @@
           renderUserManagement();
           buildLoginScreen();
         }
-      } catch (e) { toast('เกิดข้อผิดพลาด'); }
+      } catch (e) { toast('เพิ่มสมาชิกไม่สำเร็จ กรุณาลองใหม่'); }
       btn.disabled = false; btn.textContent = 'บันทึก';
     }
 
@@ -1786,7 +1798,7 @@
           renderUserManagement();
           buildLoginScreen();
         }
-      } catch (e) { toast('\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14'); }
+      } catch (e) { toast('ลบสมาชิกไม่สำเร็จ กรุณาลองใหม่'); }
       btn.disabled = false; btn.textContent = '\u0e25\u0e1a\u0e40\u0e25\u0e22';
     }
 
