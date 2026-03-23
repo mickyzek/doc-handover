@@ -841,7 +841,9 @@
         const planCacheKey = 'plans:' + SU.name + ':' + SU.role;
         const cachedPlans = cacheGet(planCacheKey);
         const verifyProm = api('verifyPin', { name: SU.name, pin: PB, role: SU.role });
-        const plansProm = _plansPrefetch || (cachedPlans ? Promise.resolve(cachedPlans) : api('getPlans', { name: SU.name, role: SU.role }));
+        const plansProm = _plansPrefetch
+          ? _plansPrefetch.then(d => d || (cachedPlans ? cachedPlans : api('getPlans', { name: SU.name, role: SU.role })))
+          : (cachedPlans ? Promise.resolve(cachedPlans) : api('getPlans', { name: SU.name, role: SU.role }));
         const [res, plans] = await Promise.all([verifyProm, plansProm]);
         if (res.ok) {
           PIN_ATTEMPTS = 0;
@@ -1086,7 +1088,7 @@
             RF = ''; renderReceiveTab();
             loadAllDocsBackground();
             toast('รีเฟรชแล้ว ✓');
-          } catch (e) { toast('รีเฟรชไม่สำเร็จ ลองใหม่'); }
+          } catch (e) { toast('รีเฟรชไม่สำเร็จ ลองใหม่'); RF = ''; renderReceiveTab(); }
         }
       }, { passive: true });
     }
@@ -1129,6 +1131,7 @@
 
     async function openReceiveDetail(id) {
       CP = PLANS.find(p => p.id === id);
+      if (!CP) { toast('ไม่พบแผนงาน'); return; }
       if (!CP.loaded) {
         document.getElementById('rdModal-name').textContent = CP.name;
         document.getElementById('rdModal-meta').textContent = `${CP.dept} • กำลังโหลด...`;
@@ -1595,6 +1598,7 @@
     // ===== BATCH DETAIL =====
     async function openBatch(id) {
       CP = PLANS.find(x => x.id === id);
+      if (!CP) { toast('ไม่พบแผนงาน'); return; }
       if (!CP.loaded) { toast('กำลังโหลด...'); await loadDocs(id); }
       if (CP.signer && !SIGDATA[id]) {
         const sig = await api('getSign', { plan_id: id });
