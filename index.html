@@ -1175,9 +1175,12 @@
     function closeReceiveDetail() {
       rdConfirmState = false;
       goScreen('main');
-      // refresh receive tab
-      const isMgr = CU.role === 'mgr';
-      if (!isMgr) { RF = ''; renderReceiveTab(); }
+      // Update PLANS in-memory (CP is a reference, but ensure status is synced)
+      const idx = PLANS.findIndex(p => p.id === CP.id);
+      if (idx !== -1) { PLANS[idx].status = CP.status; PLANS[idx].signer = CP.signer; }
+      // Refresh both tabs so status reflects immediately
+      if (CU.role !== 'mgr') { RF = ''; renderReceiveTab(); }
+      renderHistory();
     }
 
     function togDoc(i, v) { if (CP) { CP.checked[i] = v; } }
@@ -1624,6 +1627,7 @@
     }
     function closeBatch() {
       goScreen('main');
+      resetAutoLogout();
       const btn = document.getElementById('deletePlanBtnHeader');
       if (btn) btn.style.display = 'none';
     }
@@ -1715,6 +1719,8 @@
       const pin = document.getElementById('newUserPin').value.trim();
       if (!name || !pin) { toast('กรุณากรอกข้อมูลให้ครบ'); return; }
       if (pin.length !== 6) { toast('PIN ต้องเป็นตัวเลข 6 หลัก'); return; }
+      const allUsers = [...(AU.ga || []), ...(AU.mgr || [])];
+      if (allUsers.some(u => u.name === name)) { toast('มีชื่อ "' + name + '" อยู่แล้ว'); return; }
       const btn = document.getElementById('addUserBtn');
       btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
       try {
