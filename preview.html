@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UI Style Preview — Doc Handover</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans Thai', sans-serif; background: #0f0f0f; color: #fff; padding: 32px 16px; min-height: 100vh; }
+h1 { text-align: center; font-size: 18px; font-weight: 600; color: #888; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+p.sub { text-align: center; font-size: 13px; color: #555; margin-bottom: 40px; }
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; max-width: 900px; margin: 0 auto; }
+@media(max-width:600px){ .grid { grid-template-columns: 1fr; } }
+.style-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 14px; }
+.phone { border-radius: 32px; overflow: hidden; width: 100%; aspect-ratio: 9/16; position: relative; }
+
+/* ====== STYLE 1: iOS / Apple ====== */
+.s1 { background: #F2F2F7; }
+.s1 .topbar { background: rgba(242,242,247,0.85); backdrop-filter: blur(20px); padding: 16px 20px 12px; border-bottom: 0.5px solid rgba(0,0,0,0.1); }
+.s1 .topbar-title { font-size: 17px; font-weight: 600; color: #000; letter-spacing: -0.3px; }
+.s1 .topbar-sub { font-size: 12px; color: #8E8E93; margin-top: 2px; }
+.s1 .body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.s1 .card { background: #fff; border-radius: 16px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.s1 .card-title { font-size: 14px; font-weight: 600; color: #1C1C1E; }
+.s1 .card-sub { font-size: 12px; color: #8E8E93; margin-top: 3px; }
+.s1 .badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-top: 8px; background: #E8F5E9; color: #2E7D32; }
+.s1 .badge.warn { background: #FFF3E0; color: #E65100; }
+.s1 .badge.info { background: #E3F2FD; color: #1565C0; }
+.s1 .row { display: flex; justify-content: space-between; align-items: center; }
+.s1 .amount { font-size: 13px; font-weight: 600; color: #1C1C1E; }
+.s1 .pin-dots { display: flex; gap: 10px; justify-content: center; margin: 12px 0; }
+.s1 .dot { width: 11px; height: 11px; border-radius: 50%; background: #007AFF; }
+.s1 .dot.empty { background: transparent; border: 1.5px solid #C7C7CC; }
+.s1 .btn { background: #007AFF; color: #fff; border: none; border-radius: 14px; padding: 14px; width: 100%; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer; }
+.s1 .numpad { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.s1 .num { background: #fff; border-radius: 12px; padding: 12px 0; text-align: center; font-size: 20px; font-weight: 400; color: #1C1C1E; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+.s1 .stat-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.s1 .stat { background: #fff; border-radius: 14px; padding: 12px; text-align: center; }
+.s1 .stat-num { font-size: 22px; font-weight: 700; color: #007AFF; }
+.s1 .stat-lbl { font-size: 10px; color: #8E8E93; margin-top: 2px; }
+
+/* ====== STYLE 2: Material You ====== */
+.s2 { background: #FFFBFE; }
+.s2 .topbar { background: #FFFBFE; padding: 20px 16px 12px; }
+.s2 .topbar-title { font-size: 22px; font-weight: 700; color: #1C1B1F; letter-spacing: -0.5px; }
+.s2 .topbar-sub { font-size: 12px; color: #49454F; margin-top: 4px; }
+.s2 .fab { display: inline-flex; align-items: center; gap: 6px; background: #6750A4; color: #fff; border-radius: 16px; padding: 8px 16px; font-size: 13px; font-weight: 600; margin-top: 8px; }
+.s2 .body { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.s2 .card { background: #F3EDF7; border-radius: 24px; padding: 14px 16px; }
+.s2 .card-title { font-size: 14px; font-weight: 600; color: #1C1B1F; }
+.s2 .card-sub { font-size: 11px; color: #49454F; margin-top: 2px; }
+.s2 .chip { display: inline-block; font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; margin-top: 8px; border: 1px solid #CAC4D0; color: #49454F; background: #fff; }
+.s2 .chip.done { border-color: #006E1C; color: #006E1C; background: #CCFBE4; }
+.s2 .chip.partial { border-color: #7D5700; color: #7D5700; background: #FFDFA0; }
+.s2 .row { display: flex; justify-content: space-between; align-items: center; }
+.s2 .amount { font-size: 13px; font-weight: 700; color: #6750A4; }
+.s2 .stat-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+.s2 .stat { background: #E8DEF8; border-radius: 20px; padding: 12px 8px; text-align: center; }
+.s2 .stat-num { font-size: 20px; font-weight: 800; color: #6750A4; }
+.s2 .stat-lbl { font-size: 10px; color: #49454F; margin-top: 2px; }
+.s2 .pin-dots { display: flex; gap: 10px; justify-content: center; margin: 12px 0; }
+.s2 .dot { width: 12px; height: 12px; border-radius: 50%; background: #6750A4; }
+.s2 .dot.empty { background: transparent; border: 2px solid #CAC4D0; }
+.s2 .numpad { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+.s2 .num { background: #E8DEF8; border-radius: 50px; padding: 12px 0; text-align: center; font-size: 20px; font-weight: 500; color: #1C1B1F; }
+.s2 .btn { background: #6750A4; color: #fff; border: none; border-radius: 100px; padding: 14px; width: 100%; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer; }
+
+/* ====== STYLE 3: Dark / Vercel ====== */
+.s3 { background: #09090B; }
+.s3 .topbar { padding: 20px 16px 14px; border-bottom: 1px solid #18181B; }
+.s3 .topbar-title { font-size: 15px; font-weight: 600; color: #FAFAFA; letter-spacing: -0.2px; }
+.s3 .topbar-sub { font-size: 11px; color: #71717A; margin-top: 3px; }
+.s3 .body { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.s3 .card { background: #18181B; border: 1px solid #27272A; border-radius: 12px; padding: 14px 16px; }
+.s3 .card-title { font-size: 13px; font-weight: 500; color: #FAFAFA; }
+.s3 .card-sub { font-size: 11px; color: #71717A; margin-top: 3px; }
+.s3 .badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 6px; margin-top: 8px; background: #052e16; color: #4ade80; border: 1px solid #166534; }
+.s3 .badge.warn { background: #1c0a00; color: #fb923c; border-color: #7c2d12; }
+.s3 .badge.info { background: #0c1a2e; color: #60a5fa; border-color: #1e3a5f; }
+.s3 .row { display: flex; justify-content: space-between; align-items: center; }
+.s3 .amount { font-size: 12px; font-weight: 500; color: #A1A1AA; }
+.s3 .stat-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+.s3 .stat { background: #18181B; border: 1px solid #27272A; border-radius: 10px; padding: 10px 8px; text-align: center; }
+.s3 .stat-num { font-size: 20px; font-weight: 700; color: #FAFAFA; }
+.s3 .stat-lbl { font-size: 10px; color: #71717A; margin-top: 2px; }
+.s3 .pin-dots { display: flex; gap: 10px; justify-content: center; margin: 12px 0; }
+.s3 .dot { width: 10px; height: 10px; border-radius: 50%; background: #FAFAFA; }
+.s3 .dot.empty { background: transparent; border: 1px solid #3F3F46; }
+.s3 .numpad { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+.s3 .num { background: #18181B; border: 1px solid #27272A; border-radius: 10px; padding: 12px 0; text-align: center; font-size: 20px; font-weight: 400; color: #FAFAFA; }
+.s3 .btn { background: #FAFAFA; color: #09090B; border: none; border-radius: 8px; padding: 13px; width: 100%; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; }
+
+/* ====== STYLE 4: Neobrutalism ====== */
+.s4 { background: #FFFBE6; }
+.s4 .topbar { background: #185FA5; padding: 18px 16px 14px; border-bottom: 3px solid #000; }
+.s4 .topbar-title { font-size: 16px; font-weight: 800; color: #fff; letter-spacing: -0.3px; }
+.s4 .topbar-sub { font-size: 11px; color: rgba(255,255,255,0.75); margin-top: 3px; }
+.s4 .body { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.s4 .card { background: #fff; border: 2.5px solid #000; border-radius: 8px; padding: 12px 14px; box-shadow: 4px 4px 0 #000; }
+.s4 .card-title { font-size: 13px; font-weight: 800; color: #000; }
+.s4 .card-sub { font-size: 11px; color: #555; margin-top: 2px; }
+.s4 .badge { display: inline-block; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 4px; margin-top: 8px; background: #CCFF90; color: #000; border: 1.5px solid #000; }
+.s4 .badge.warn { background: #FFD600; }
+.s4 .badge.info { background: #80D8FF; }
+.s4 .row { display: flex; justify-content: space-between; align-items: center; }
+.s4 .amount { font-size: 13px; font-weight: 800; color: #000; }
+.s4 .stat-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.s4 .stat { background: #FFD600; border: 2px solid #000; border-radius: 6px; padding: 10px 8px; text-align: center; box-shadow: 3px 3px 0 #000; }
+.s4 .stat-num { font-size: 20px; font-weight: 900; color: #000; }
+.s4 .stat-lbl { font-size: 10px; color: #333; margin-top: 2px; font-weight: 700; }
+.s4 .pin-dots { display: flex; gap: 10px; justify-content: center; margin: 12px 0; }
+.s4 .dot { width: 12px; height: 12px; border-radius: 50%; background: #185FA5; border: 2px solid #000; }
+.s4 .dot.empty { background: transparent; border: 2px solid #000; }
+.s4 .numpad { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+.s4 .num { background: #fff; border: 2px solid #000; border-radius: 6px; padding: 11px 0; text-align: center; font-size: 20px; font-weight: 800; color: #000; box-shadow: 3px 3px 0 #000; }
+.s4 .btn { background: #185FA5; color: #fff; border: 2.5px solid #000; border-radius: 8px; padding: 13px; width: 100%; font-size: 14px; font-weight: 800; font-family: inherit; cursor: pointer; box-shadow: 4px 4px 0 #000; }
+
+.wrapper { background: #1a1a1a; border-radius: 16px; padding: 20px; }
+.label { color: #aaa; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.tag { font-size: 10px; background: #333; color: #888; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+</style>
+</head>
+<body>
+<h1>UI Style Preview</h1>
+<p class="sub">เลือกทิศทางที่ชอบ แล้วแจ้งชื่อ style ได้เลย</p>
+
+<div class="grid">
+
+  <!-- STYLE 1: iOS -->
+  <div class="wrapper">
+    <div class="label">① iOS / Apple <span class="tag">Clean · Minimal</span></div>
+    <div class="phone s1">
+      <div class="s1 topbar">
+        <div class="topbar-title">รับเอกสาร</div>
+        <div class="topbar-sub">3 รายการรอรับ</div>
+      </div>
+      <div class="s1 body">
+        <div class="s1 stat-row">
+          <div class="s1 stat"><div class="stat-num">12</div><div class="stat-lbl">ทั้งหมด</div></div>
+          <div class="s1 stat"><div class="stat-num" style="color:#2E7D32">8</div><div class="stat-lbl">รับแล้ว</div></div>
+          <div class="s1 stat"><div class="stat-num" style="color:#E65100">3</div><div class="stat-lbl">รอรับ</div></div>
+        </div>
+        <div class="s1 card">
+          <div class="s1 row"><div class="card-title">ใบแจ้งหนี้มิ.ย.</div><div class="amount">฿24,500</div></div>
+          <div class="card-sub">ฝ่ายบัญชี • 3 รายการ</div>
+          <div class="s1 badge warn">รอรับ</div>
+        </div>
+        <div class="s1 card">
+          <div class="s1 row"><div class="card-title">สัญญาจ้างงาน</div><div class="amount">฿180,000</div></div>
+          <div class="card-sub">ฝ่าย HR • 2 รายการ</div>
+          <div class="s1 badge">รับแล้ว</div>
+        </div>
+        <div class="s1 card" style="background:#F2F2F7">
+          <div class="card-title" style="font-size:13px;color:#3C3C43;margin-bottom:10px">กรอก PIN</div>
+          <div class="s1 pin-dots">
+            <div class="s1 dot"></div><div class="s1 dot"></div><div class="s1 dot"></div>
+            <div class="s1 dot empty"></div><div class="s1 dot empty"></div><div class="s1 dot empty"></div>
+          </div>
+          <div class="s1 numpad">
+            <div class="s1 num">1</div><div class="s1 num">2</div><div class="s1 num">3</div>
+            <div class="s1 num">4</div><div class="s1 num">5</div><div class="s1 num">6</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STYLE 2: Material You -->
+  <div class="wrapper">
+    <div class="label">② Material You <span class="tag">Colorful · Expressive</span></div>
+    <div class="phone s2">
+      <div class="s2 topbar">
+        <div class="topbar-title">รับเอกสาร</div>
+        <div class="topbar-sub">วันนี้ 23 มี.ค. 2568</div>
+        <div class="s2 fab">✦ สร้างแผนใหม่</div>
+      </div>
+      <div class="s2 body">
+        <div class="s2 stat-row">
+          <div class="s2 stat"><div class="stat-num">12</div><div class="stat-lbl">ทั้งหมด</div></div>
+          <div class="s2 stat" style="background:#CCFBE4"><div class="stat-num" style="color:#006E1C">8</div><div class="stat-lbl">รับแล้ว</div></div>
+          <div class="s2 stat" style="background:#FFDFA0"><div class="stat-num" style="color:#7D5700">3</div><div class="stat-lbl">รอรับ</div></div>
+        </div>
+        <div class="s2 card">
+          <div class="s2 row"><div class="card-title">ใบแจ้งหนี้มิ.ย.</div><div class="amount">฿24,500</div></div>
+          <div class="card-sub">ฝ่ายบัญชี • 3 รายการ</div>
+          <div class="s2 chip partial">⏳ รอรับ</div>
+        </div>
+        <div class="s2 card" style="background:#CCFBE4">
+          <div class="s2 row"><div class="card-title">สัญญาจ้างงาน</div><div class="amount" style="color:#006E1C">฿180,000</div></div>
+          <div class="card-sub">ฝ่าย HR • 2 รายการ</div>
+          <div class="s2 chip done">✓ รับแล้ว</div>
+        </div>
+        <div class="s2 card">
+          <div class="card-title" style="font-size:13px;margin-bottom:10px">กรอก PIN</div>
+          <div class="s2 pin-dots">
+            <div class="s2 dot"></div><div class="s2 dot"></div><div class="s2 dot"></div>
+            <div class="s2 dot empty"></div><div class="s2 dot empty"></div><div class="s2 dot empty"></div>
+          </div>
+          <div class="s2 numpad">
+            <div class="s2 num">1</div><div class="s2 num">2</div><div class="s2 num">3</div>
+            <div class="s2 num">4</div><div class="s2 num">5</div><div class="s2 num">6</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STYLE 3: Dark -->
+  <div class="wrapper">
+    <div class="label">③ Dark / Vercel <span class="tag">Tech · Minimal</span></div>
+    <div class="phone s3">
+      <div class="s3 topbar">
+        <div class="topbar-title">รับเอกสาร</div>
+        <div class="topbar-sub">3 รายการรอดำเนินการ</div>
+      </div>
+      <div class="s3 body">
+        <div class="s3 stat-row">
+          <div class="s3 stat"><div class="stat-num">12</div><div class="stat-lbl">ทั้งหมด</div></div>
+          <div class="s3 stat"><div class="stat-num" style="color:#4ade80">8</div><div class="stat-lbl">รับแล้ว</div></div>
+          <div class="s3 stat"><div class="stat-num" style="color:#fb923c">3</div><div class="stat-lbl">รอรับ</div></div>
+        </div>
+        <div class="s3 card">
+          <div class="s3 row"><div class="card-title">ใบแจ้งหนี้มิ.ย.</div><div class="amount">฿24,500</div></div>
+          <div class="card-sub">ฝ่ายบัญชี • 3 รายการ</div>
+          <div class="s3 badge warn">รอรับ</div>
+        </div>
+        <div class="s3 card">
+          <div class="s3 row"><div class="card-title">สัญญาจ้างงาน</div><div class="amount">฿180,000</div></div>
+          <div class="card-sub">ฝ่าย HR • 2 รายการ</div>
+          <div class="s3 badge">รับแล้ว</div>
+        </div>
+        <div class="s3 card">
+          <div class="card-title" style="font-size:12px;color:#A1A1AA;margin-bottom:10px">ENTER PIN</div>
+          <div class="s3 pin-dots">
+            <div class="s3 dot"></div><div class="s3 dot"></div><div class="s3 dot"></div>
+            <div class="s3 dot empty"></div><div class="s3 dot empty"></div><div class="s3 dot empty"></div>
+          </div>
+          <div class="s3 numpad">
+            <div class="s3 num">1</div><div class="s3 num">2</div><div class="s3 num">3</div>
+            <div class="s3 num">4</div><div class="s3 num">5</div><div class="s3 num">6</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STYLE 4: Neobrutalism -->
+  <div class="wrapper">
+    <div class="label">④ Neobrutalism <span class="tag">Bold · Distinctive</span></div>
+    <div class="phone s4">
+      <div class="s4 topbar">
+        <div class="topbar-title">📋 รับเอกสาร</div>
+        <div class="topbar-sub">3 รายการรอรับ</div>
+      </div>
+      <div class="s4 body">
+        <div class="s4 stat-row">
+          <div class="s4 stat"><div class="stat-num">12</div><div class="stat-lbl">ทั้งหมด</div></div>
+          <div class="s4 stat" style="background:#CCFF90"><div class="stat-num">8</div><div class="stat-lbl">รับแล้ว</div></div>
+          <div class="s4 stat" style="background:#FF6B6B"><div class="stat-num">3</div><div class="stat-lbl">รอรับ</div></div>
+        </div>
+        <div class="s4 card">
+          <div class="s4 row"><div class="card-title">ใบแจ้งหนี้มิ.ย.</div><div class="amount">฿24,500</div></div>
+          <div class="card-sub">ฝ่ายบัญชี • 3 รายการ</div>
+          <div class="s4 badge warn">⏳ รอรับ</div>
+        </div>
+        <div class="s4 card">
+          <div class="s4 row"><div class="card-title">สัญญาจ้างงาน</div><div class="amount">฿180,000</div></div>
+          <div class="card-sub">ฝ่าย HR • 2 รายการ</div>
+          <div class="s4 badge">✓ รับแล้ว</div>
+        </div>
+        <div class="s4 card">
+          <div class="card-title" style="font-size:13px;margin-bottom:10px">กรอก PIN</div>
+          <div class="s4 pin-dots">
+            <div class="s4 dot"></div><div class="s4 dot"></div><div class="s4 dot"></div>
+            <div class="s4 dot empty"></div><div class="s4 dot empty"></div><div class="s4 dot empty"></div>
+          </div>
+          <div class="s4 numpad">
+            <div class="s4 num">1</div><div class="s4 num">2</div><div class="s4 num">3</div>
+            <div class="s4 num">4</div><div class="s4 num">5</div><div class="s4 num">6</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p style="text-align:center;color:#555;font-size:12px;margin-top:40px;margin-bottom:8px">บอกชื่อ style ที่ชอบ หรือ "ผสม ① กับ ②" แล้วจะทำ full redesign ให้ครับ</p>
+</body>
+</html>
