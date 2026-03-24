@@ -630,13 +630,26 @@
           }
           const { data } = await query.order('id', { ascending: false });
           const now = new Date();
+          const newlyExpired = (data || []).filter(r => r.status === 'left' && r.token_expires_at && new Date(r.token_expires_at) < now);
+          if (newlyExpired.length > 0) {
+            const ids = newlyExpired.map(r => r.p_id);
+            // อัพ DB เป็น expired (ครั้งเดียว — ป้องกันส่งอีเมลซ้ำ)
+            supabaseClient.from('plans').update({ status: 'expired' }).in('p_id', ids).then(() => {}).catch(() => {});
+            // ส่งอีเมลแจ้ง GA creator
+            newlyExpired.forEach(r => {
+              supabaseClient.functions.invoke('send-email', {
+                body: { type: 'plan_expired', plan_id: r.p_id, plan_name: r.name, dept: r.dept, created_by: r.created_by }
+              }).catch(() => {});
+            });
+          }
+          const expiredIds = new Set(newlyExpired.map(r => r.p_id));
           return (data || []).map(r => ({
             plan_id: r.p_id,
             name: r.name,
             date: r.date,
             dept: r.dept,
             created_by: r.created_by,
-            status: r.status === 'left' && r.token_expires_at && new Date(r.token_expires_at) < now ? 'expired' : r.status,
+            status: expiredIds.has(r.p_id) ? 'expired' : r.status,
             signer: r.signer || '',
             sign_img: '', // Loaded on demand now
             signed_at: r.signed_at || '',

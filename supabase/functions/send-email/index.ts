@@ -12,14 +12,14 @@ const CORS = {
 
 // ===== Types =====
 interface NotifyPayload {
-  type: 'plan_received'
+  type: 'plan_received' | 'plan_expired'
   plan_id: string
   plan_name: string
   dept: string
   created_by: string
   signer?: string
   signed_at?: string
-  status: 'done' | 'partial'
+  status?: 'done' | 'partial'
 }
 
 // ===== Resend =====
@@ -88,6 +88,18 @@ function tplPlanReceived(d: NotifyPayload) {
   )
 }
 
+function tplPlanExpired(d: NotifyPayload) {
+  return base('แจ้งเตือน: Token หมดอายุแล้ว', `
+    <p style="font-size:15px;font-weight:600;color:#1a1a1a;margin:0 0 4px">Token ของแผนงานนี้หมดอายุแล้ว</p>
+    <p style="font-size:13px;color:#666;margin:0 0 20px"><span class="badge" style="background:#F3F4F6;color:#6B7280;">หมดอายุ</span></p>
+    <table class="info-table">
+      <tr><td>ชื่อแผนงาน</td><td>${esc(d.plan_name)}</td></tr>
+      <tr><td>แผนก</td><td>${esc(d.dept)}</td></tr>
+    </table>
+    <p style="font-size:13px;color:#555;margin:16px 0 0">กรุณาเปิดแผนงานแล้วกด <strong>"Gen Token ใหม่"</strong> เพื่อสร้าง Token สำหรับรับเอกสาร</p>
+  `)
+}
+
 function esc(s: string) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
@@ -108,21 +120,29 @@ Deno.serve(async (req) => {
     return json({ ok: false, error: 'Invalid JSON' }, 400)
   }
 
-  if (payload.type !== 'plan_received') {
+  if (!['plan_received', 'plan_expired'].includes(payload.type)) {
     return json({ ok: false, error: `Unknown type: ${payload.type}` }, 400)
   }
 
   const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
   try {
-    // แจ้ง GA creator
+    // แจ้ง GA creator (ทั้ง plan_received และ plan_expired)
     const { data: ga } = await db.from('ga_staff').select('email').eq('name', payload.created_by).maybeSingle()
     if (ga?.email) {
-      const isDone = payload.status === 'done'
-      const subject = isDone
-        ? `[GA] เอกสารได้รับครบ: ${payload.plan_name}`
-        : `[GA] รับบางส่วน: ${payload.plan_name}`
-      await sendEmail(ga.email, subject, tplPlanReceived(payload))
+      if (payload.type === 'plan_received') {
+        const isDone = payload.status === 'done'
+        const subject = isDone
+          ? `[GA] เอกสารได้รับครบ: ${payload.plan_name}`
+          : `[GA] รับบางส่วน: ${payload.plan_name}`
+        await sendEmail(ga.email, subject, tplPlanReceived(payload))
+      } else {
+        await sendEmail(
+          ga.email,
+          `[GA] Token หมดอายุ: ${payload.plan_name}`,
+          tplPlanExpired(payload)
+        )
+      }
     }
     return json({ ok: true })
   } catch (err) {
