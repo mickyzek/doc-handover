@@ -468,6 +468,32 @@
     </div>
   </div>
 
+  <!-- Edit Email Modal -->
+  <div id="editEmailModal"
+    class="fixed inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200 px-6"
+    style="z-index:300;">
+    <div class="absolute inset-0 bg-black/40" onclick="closeEditEmailModal()"></div>
+    <div class="relative w-full bg-white rounded-2xl p-6" style="max-width:320px;">
+      <div class="flex flex-col items-center text-center mb-4">
+        <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
+          <i data-lucide="mail" class="w-6 h-6 text-brand"></i>
+        </div>
+        <p class="font-semibold text-gray-900 text-base">แก้ไขอีเมล</p>
+        <p id="editEmailNameLabel" class="text-sm text-brand font-semibold mt-1"></p>
+      </div>
+      <input id="editEmailInput" type="email" placeholder="example@company.com"
+        class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand mb-4"
+        autocomplete="off" />
+      <p class="text-xs text-gray-400 mb-4 text-center">เว้นว่างเพื่อลบอีเมล</p>
+      <div class="flex gap-3">
+        <button onclick="closeEditEmailModal()"
+          class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">ยกเลิก</button>
+        <button id="editEmailSaveBtn" onclick="confirmEditEmail()"
+          class="flex-1 py-2.5 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-blue-800 transition">บันทึก</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Logout Modal -->
   <div id="logoutModal"
     class="fixed inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200 px-6"
@@ -593,9 +619,12 @@
     async function api(action, params) {
       try {
         if (action === 'getUsers') {
-          const { data: ga } = await supabaseClient.from('ga_staff').select('name, role');
-          const { data: mgr } = await supabaseClient.from('managers').select('name, role');
-          return { ga: ga || [], mgr: mgr || [] };
+          const { data: ga } = await supabaseClient.from('ga_staff').select('name, role, email');
+          const { data: mgr } = await supabaseClient.from('managers').select('name, role, email');
+          return {
+            ga: (ga || []).map(r => ({ name: r.name, role: r.role, email: r.email || '' })),
+            mgr: (mgr || []).map(r => ({ name: r.name, role: r.role, email: r.email || '' }))
+          };
         }
 
         if (action === 'verifyPin') {
@@ -608,7 +637,7 @@
           // Case 1: stored is already a SHA256 hash
           if (stored === hInput) return { ok: true };
           // Case 2: stored is plain-text PIN — auto-upgrade to hash on first login
-          if (stored.padStart(6, '0') === input) {
+          if (stored === input) {
             await supabaseClient.from(table).update({ pin: hInput }).eq('name', params.name);
             return { ok: true };
           }
@@ -639,7 +668,7 @@
             newlyExpired.forEach(r => {
               supabaseClient.functions.invoke('send-email', {
                 body: { type: 'plan_expired', plan_id: r.p_id, plan_name: r.name, dept: r.dept, created_by: r.created_by }
-              }).catch(() => {});
+              }).catch(e => console.error('[email:expired]', r.p_id, e));
             });
           }
           const expiredIds = new Set(newlyExpired.map(r => r.p_id));
@@ -743,6 +772,15 @@
           return { ok: true };
         }
 
+        if (action === 'updateUserEmail') {
+          const table = params.role === 'ga' ? 'ga_staff' : 'managers';
+          const { error } = await supabaseClient.from(table)
+            .update({ email: params.email ? params.email.trim().toLowerCase() : null })
+            .eq('name', params.name);
+          if (error) throw error;
+          return { ok: true };
+        }
+
         if (action === 'verifyToken') {
           const { data, error } = await supabaseClient
             .from('plans')
@@ -773,7 +811,9 @@
         }
 
         if (action === 'leavePlan') {
-          const token = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+          const tokenArr = new Uint32Array(1);
+          crypto.getRandomValues(tokenArr);
+          const token = String(tokenArr[0] % 10000).padStart(4, '0');
           const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
           const { error } = await supabaseClient.from('plans').update({
             status: 'left',
@@ -1279,7 +1319,7 @@
           toast('ส่งเอกสารเรียบร้อยแล้ว ✓');
           renderSend();
         }
-      } catch (e) { toast('ส่งเอกสารไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่'); }
+      } catch (e) { console.error('[submitPlan]', e); toast('ส่งเอกสารไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่'); }
       if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="send" class="w-4 h-4"></i> ส่งเอกสาร'; }
       lucide.createIcons();
     }
@@ -1324,7 +1364,7 @@
             RF = ''; renderReceiveTab();
             loadAllDocsBackground();
             toast('รีเฟรชแล้ว ✓');
-          } catch (e) { toast('รีเฟรชไม่สำเร็จ ลองใหม่'); RF = ''; renderReceiveTab(); }
+          } catch (e) { console.error('[refresh]', e); toast('รีเฟรชไม่สำเร็จ ลองใหม่'); RF = ''; renderReceiveTab(); }
         }
       }, { passive: true });
     }
@@ -1436,6 +1476,7 @@
       const c = document.getElementById('signatureCanvas'); if (!c) return;
       const dpr = window.devicePixelRatio || 1;
       const r = c.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) { requestAnimationFrame(initSign); return; }
       c.width = Math.round(r.width * dpr);
       c.height = Math.round(r.height * dpr);
       sctx = c.getContext('2d');
@@ -1494,7 +1535,7 @@
         sendNotify('plan_received', { plan_id: CP.id, plan_name: CP.name, dept: CP.dept, created_by: CP.createdBy, signer: name, signed_at: ts, status });
         toast(all ? 'ยืนยันรับครบทุกรายการแล้ว ✓' : 'บันทึกรับบางส่วนแล้ว ✓');
         closeReceiveDetail();
-      } catch (e) { toast('บันทึกการรับไม่สำเร็จ กรุณาลองใหม่'); }
+      } catch (e) { console.error('[submitReceive]', e); toast('บันทึกการรับไม่สำเร็จ กรุณาลองใหม่'); if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; btn.className = btn.className.replace('bg-warn hover:bg-amber-700', 'bg-success hover:bg-emerald-800'); lucide.createIcons(); } }
     }
 
     // ===== HISTORY TAB =====
@@ -1942,7 +1983,7 @@
           closeBatch();
           if (CU.role === 'mgr') renderMgrDash(); else renderHistory();
         }
-      } catch (e) { toast('เกิดข้อผิดพลาด ลองใหม่'); }
+      } catch (e) { console.error('[cancelPlan]', e); toast('เกิดข้อผิดพลาด ลองใหม่'); }
       btn.disabled = false; btn.textContent = 'ยืนยันยกเลิก';
     }
 
@@ -1960,7 +2001,7 @@
           closeBatch();
           renderHistory();
         }
-      } catch (e) { toast('ลบแผนงานไม่สำเร็จ กรุณาลองใหม่'); }
+      } catch (e) { console.error('[deletePlan]', e); toast('ลบแผนงานไม่สำเร็จ กรุณาลองใหม่'); }
       btn.disabled = false; btn.textContent = 'ลบเลย';
     }
 
@@ -1991,11 +2032,17 @@
             <div>
               <p class="font-medium text-gray-900 text-sm">${he(u.name)}</p>
               <p class="text-[10px] font-medium uppercase tracking-wider ${u.type === 'mgr' ? 'text-purple-600' : 'text-gray-400'}">${u.type === 'mgr' ? 'ผู้ดูแลระบบ' : 'เจ้าหน้าที่ GA'}</p>
+              <p class="text-[10px] text-gray-400 mt-0.5">${u.email ? he(u.email) : '<span class="text-gray-300">ยังไม่มีอีเมล</span>'}</p>
             </div>
           </div>
-          <button data-name="${he(u.name)}" data-utype="${he(u.type)}" onclick="confirmDeleteUser(this.dataset.name, this.dataset.utype)" class="p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>
+          <div class="flex items-center gap-1">
+            <button data-name="${he(u.name)}" data-utype="${he(u.type)}" data-email="${he(u.email||'')}" onclick="openEditEmailModal(this.dataset.name, this.dataset.utype, this.dataset.email)" class="p-2 rounded-lg text-gray-300 hover:text-brand hover:bg-blue-50 transition">
+              <i data-lucide="pencil" class="w-4 h-4"></i>
+            </button>
+            <button data-name="${he(u.name)}" data-utype="${he(u.type)}" onclick="confirmDeleteUser(this.dataset.name, this.dataset.utype)" class="p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
         </div>`;
       }).join('')}
     </div>`;
@@ -2034,12 +2081,48 @@
         if (res.ok) {
           toast('เพิ่มสมาชิกสำเร็จ ✓');
           cacheDel('users');
-          if (role === 'ga') AU.ga.push({ name, role }); else AU.mgr.push({ name, role });
+          if (role === 'ga') AU.ga.push({ name, role, email: email || '' }); else AU.mgr.push({ name, role, email: email || '' });
           closeUserModal();
           renderUserManagement();
           buildLoginScreen();
         }
-      } catch (e) { toast('เพิ่มสมาชิกไม่สำเร็จ กรุณาลองใหม่'); }
+      } catch (e) { console.error('[addUser]', e); toast('เพิ่มสมาชิกไม่สำเร็จ กรุณาลองใหม่'); }
+      btn.disabled = false; btn.textContent = 'บันทึก';
+    }
+
+    // ===== EDIT EMAIL =====
+    let _editEmailTarget = null;
+
+    function openEditEmailModal(name, role, currentEmail) {
+      _editEmailTarget = { name, role };
+      document.getElementById('editEmailNameLabel').textContent = name;
+      document.getElementById('editEmailInput').value = currentEmail || '';
+      const m = document.getElementById('editEmailModal');
+      m.classList.remove('pointer-events-none'); m.classList.add('opacity-100');
+      setTimeout(() => document.getElementById('editEmailInput').focus(), 150);
+    }
+    function closeEditEmailModal() {
+      const m = document.getElementById('editEmailModal');
+      m.classList.add('pointer-events-none'); m.classList.remove('opacity-100');
+      _editEmailTarget = null;
+    }
+    async function confirmEditEmail() {
+      if (!_editEmailTarget) return;
+      const email = document.getElementById('editEmailInput').value.trim();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('รูปแบบอีเมลไม่ถูกต้อง'); return; }
+      const btn = document.getElementById('editEmailSaveBtn');
+      btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+      try {
+        const res = await api('updateUserEmail', { ..._editEmailTarget, email });
+        if (res.ok) {
+          const list = _editEmailTarget.role === 'ga' ? AU.ga : AU.mgr;
+          const u = list.find(x => x.name === _editEmailTarget.name);
+          if (u) u.email = email;
+          toast('บันทึกอีเมลเรียบร้อย ✓');
+          closeEditEmailModal();
+          renderUserManagement();
+        }
+      } catch (e) { console.error('[editEmail]', e); toast('บันทึกไม่สำเร็จ กรุณาลองใหม่'); }
       btn.disabled = false; btn.textContent = 'บันทึก';
     }
 
@@ -2073,7 +2156,7 @@
           renderUserManagement();
           buildLoginScreen();
         }
-      } catch (e) { toast('ลบสมาชิกไม่สำเร็จ กรุณาลองใหม่'); }
+      } catch (e) { console.error('[deleteUser]', e); toast('ลบสมาชิกไม่สำเร็จ กรุณาลองใหม่'); }
       btn.disabled = false; btn.textContent = '\u0e25\u0e1a\u0e40\u0e25\u0e22';
     }
 
@@ -2143,7 +2226,7 @@
           const msg = res.error === 'expired'
             ? 'Token หมดอายุแล้ว กรุณาติดต่อ GA เพื่อขอ Token ใหม่'
             : 'ไม่พบเอกสารสำหรับ Token นี้ หรืออาจรับไปแล้ว';
-          result.innerHTML = `<div class="bg-red-50 border border-red-100 rounded-xl p-4 text-center"><p class="text-sm text-red-600 font-medium">${msg}</p></div>`;
+          result.innerHTML = `<div class="bg-red-50 border border-red-100 rounded-xl p-4 text-center"><p class="text-sm text-red-600 font-medium">${he(msg)}</p></div>`;
           VT = { plan: null, docs: [] };
         } else {
           VT = { plan: res.plan, docs: res.docs };
@@ -2206,7 +2289,7 @@
             </div>`;
           lucide.createIcons();
         }
-      } catch(e) { toast('เกิดข้อผิดพลาด กรุณาลองใหม่'); btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; lucide.createIcons(); }
+      } catch(e) { console.error('[confirmByToken]', e); toast('เกิดข้อผิดพลาด กรุณาลองใหม่'); btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; lucide.createIcons(); }
     }
 
     // ===== LEAVE FLOW =====
@@ -2269,7 +2352,7 @@
           tm.classList.add('pointer-events-auto', 'opacity-100');
           lucide.createIcons();
         }
-      } catch (e) { toast('ฝากเอกสารไม่สำเร็จ กรุณาลองใหม่'); }
+      } catch (e) { console.error('[submitLeave]', e); toast('ฝากเอกสารไม่สำเร็จ กรุณาลองใหม่'); }
       btn.disabled = false; btn.textContent = 'ยืนยันฝาก';
     }
 
