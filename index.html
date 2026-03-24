@@ -259,6 +259,11 @@
             <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">ผู้ดูแลระบบ</p>
             <div class="bg-white rounded-xl card-shadow overflow-hidden" id="mgrUserList"></div>
           </div>
+          <div class="mt-6 text-center">
+            <button onclick="openVerifyToken()" class="inline-flex items-center gap-1.5 text-xs text-brand font-semibold hover:underline">
+              <i data-lucide="key" class="w-3.5 h-3.5"></i>มี Token รับเอกสาร →
+            </button>
+          </div>
         </div>
       </div>
 
@@ -359,6 +364,17 @@
           </button>
         </div>
         <div class="flex-1 overflow-auto px-4 pt-4 pb-6" id="batchModal-body"></div>
+      </div>
+
+      <!-- VERIFY TOKEN SCREEN -->
+      <div id="screen-verify-token" class="screen" style="position:absolute;inset:0;z-index:60;background:#F7F7F5;flex-direction:column;">
+        <div class="bg-white px-4 py-3 flex items-center gap-3 card-shadow" style="position:sticky;top:0;z-index:10;">
+          <button onclick="closeVerifyToken()" class="p-1.5 rounded-full hover:bg-gray-100 transition">
+            <i data-lucide="arrow-left" class="w-5 h-5 text-gray-600"></i>
+          </button>
+          <p class="font-semibold text-gray-900 text-sm">ยืนยันรับเอกสาร (Token)</p>
+        </div>
+        <div class="flex-1 overflow-auto px-4 pt-6 pb-8" id="verifyTokenBody"></div>
       </div>
 
     </div>
@@ -688,6 +704,35 @@
           return { ok: true };
         }
 
+        if (action === 'verifyToken') {
+          const { data, error } = await supabaseClient
+            .from('plans')
+            .select('p_id, name, date, dept, created_by, status, left_location, left_with, sign_token, token_expires_at')
+            .eq('sign_token', params.token)
+            .eq('status', 'left')
+            .maybeSingle();
+          if (error) throw error;
+          if (!data) return { ok: false, error: 'not_found' };
+          if (data.token_expires_at && new Date(data.token_expires_at) < new Date()) {
+            return { ok: false, error: 'expired' };
+          }
+          const { data: docs } = await supabaseClient.from('documents').select('doc_no, vendor, description, amount').eq('p_id', data.p_id);
+          const plan = { id: data.p_id, name: data.name, date: data.date, dept: data.dept, createdBy: data.created_by, status: data.status, left_location: data.left_location || '', left_with: data.left_with || '' };
+          return { ok: true, plan, docs: (docs || []).map(r => ({ doc_no: r.doc_no, vendor: r.vendor, description: r.description, amount: Number(r.amount) || 0 })) };
+        }
+
+        if (action === 'confirmByToken') {
+          const { error } = await supabaseClient.from('plans').update({
+            status: 'done',
+            signer: params.confirmed_by,
+            signed_at: new Date().toISOString(),
+            sign_token: null,
+            token_expires_at: null
+          }).eq('p_id', params.plan_id).eq('sign_token', params.token).eq('status', 'left');
+          if (error) throw error;
+          return { ok: true };
+        }
+
         if (action === 'leavePlan') {
           const token = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
           const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
@@ -756,12 +801,14 @@
       if (!t) return;
       t.classList.add('active');
       t.style.display = 'flex';
-      if (name === 'loading' || name === 'pin') { t.style.flexDirection = 'column'; }
+      if (name === 'loading' || name === 'pin' || name === 'verify-token') { t.style.flexDirection = 'column'; }
       else if (name === 'main') { t.style.padding = '0'; t.style.flexDirection = 'column'; }
     }
 
     // ===== INIT =====
     async function init() {
+      const urlToken = new URLSearchParams(window.location.search).get('token');
+      if (urlToken) { openVerifyToken(urlToken); return; }
       goScreen('loading');
       const cached = cacheGet('users');
       if (cached) { AU = cached; buildLoginScreen(); goScreen('login'); lucide.createIcons(); api('getUsers').then(d => { cacheSet('users', d); }).catch(() => { }); return; }
@@ -1841,6 +1888,138 @@
         }
       } catch (e) { toast('\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14'); }
       btn.disabled = false; btn.textContent = '\u0e25\u0e1a\u0e40\u0e25\u0e22';
+    }
+
+    // ===== VERIFY TOKEN FLOW =====
+    let VT = { plan: null, docs: [] };
+
+    function openVerifyToken(preToken = '') {
+      VT = { plan: null, docs: [] };
+      const body = document.getElementById('verifyTokenBody');
+      const digits = (String(preToken || '') + '    ').slice(0, 4).split('');
+      body.innerHTML = `
+        <div class="text-center mb-8">
+          <div class="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-3">
+            <i data-lucide="key" class="w-7 h-7 text-warn"></i>
+          </div>
+          <p class="font-semibold text-gray-900">กรอก Token 4 หลัก</p>
+          <p class="text-sm text-gray-400 mt-1">รับ Token จาก GA ผู้นำส่งเอกสาร</p>
+        </div>
+        <div class="flex gap-3 justify-center mb-6">
+          ${[0,1,2,3].map(i => `<input type="tel" inputmode="numeric" maxlength="1" id="vt${i}" value="${digits[i].trim()}"
+            class="w-14 h-16 text-center text-2xl font-bold border-2 border-gray-200 rounded-xl bg-white focus:border-brand focus:outline-none transition"
+            oninput="vtInput(this,${i})" onkeydown="vtKeydown(event,${i})">`).join('')}
+        </div>
+        <button onclick="searchToken()" id="vtSearchBtn"
+          class="w-full py-3 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-blue-800 transition flex items-center justify-center gap-2 card-shadow-md mb-6">
+          <i data-lucide="search" class="w-4 h-4"></i> ค้นหาเอกสาร
+        </button>
+        <div id="vtResult"></div>`;
+      goScreen('verify-token');
+      lucide.createIcons();
+      if (String(preToken).replace(/\D/g,'').length === 4) {
+        searchToken(String(preToken));
+      } else {
+        document.getElementById('vt0')?.focus();
+      }
+    }
+
+    function closeVerifyToken() {
+      VT = { plan: null, docs: [] };
+      goScreen('login');
+      lucide.createIcons();
+    }
+
+    function vtInput(el, idx) {
+      el.value = el.value.replace(/\D/g, '').slice(-1);
+      if (el.value && idx < 3) document.getElementById('vt' + (idx + 1))?.focus();
+    }
+
+    function vtKeydown(e, idx) {
+      if (e.key === 'Backspace' && !e.target.value && idx > 0) document.getElementById('vt' + (idx - 1))?.focus();
+      if (e.key === 'Enter') searchToken();
+    }
+
+    function getVtToken() {
+      return [0,1,2,3].map(i => document.getElementById('vt' + i)?.value || '').join('');
+    }
+
+    async function searchToken(preToken) {
+      const token = preToken || getVtToken();
+      if (token.replace(/\s/g,'').length < 4) { toast('กรอก Token ให้ครบ 4 หลัก'); return; }
+      const btn = document.getElementById('vtSearchBtn');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> กำลังค้นหา...'; lucide.createIcons(); }
+      const result = document.getElementById('vtResult');
+      try {
+        const res = await api('verifyToken', { token });
+        if (!res.ok) {
+          const msg = res.error === 'expired'
+            ? 'Token หมดอายุแล้ว กรุณาติดต่อ GA เพื่อขอ Token ใหม่'
+            : 'ไม่พบเอกสารสำหรับ Token นี้ หรืออาจรับไปแล้ว';
+          result.innerHTML = `<div class="bg-red-50 border border-red-100 rounded-xl p-4 text-center"><p class="text-sm text-red-600 font-medium">${msg}</p></div>`;
+          VT = { plan: null, docs: [] };
+        } else {
+          VT = { plan: res.plan, docs: res.docs };
+          const p = res.plan; const docs = res.docs;
+          const dStr = p.date ? new Date(p.date).toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'2-digit' }) : '';
+          result.innerHTML = `
+            <div class="bg-white rounded-2xl card-shadow p-4 mb-4">
+              <div class="flex items-start justify-between mb-3">
+                <div><p class="font-bold text-gray-900 text-sm">${he(p.dept||'')}</p><p class="text-xs text-gray-400 mt-0.5">${he(p.name||'')} · ${dStr}</p></div>
+                <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-amber-50 text-amber-600 shrink-0">ฝากไว้</span>
+              </div>
+              <div class="bg-gray-50 rounded-xl px-3 py-2.5 mb-3 space-y-1">
+                <div class="flex gap-2 text-xs"><span class="text-gray-400 w-20 shrink-0">สถานที่ฝาก</span><span class="font-medium text-gray-700">${he(p.left_location||'-')}</span></div>
+                <div class="flex gap-2 text-xs"><span class="text-gray-400 w-20 shrink-0">ฝากกับ</span><span class="font-medium text-gray-700">${he(p.left_with||'-')}</span></div>
+              </div>
+              <p class="text-xs font-semibold text-gray-500 mb-2">รายการเอกสาร (${docs.length} รายการ)</p>
+              <div class="space-y-1.5 mb-4">
+                ${docs.map(d => `<div class="flex items-start gap-2 text-xs">
+                  <span class="shrink-0 font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">${he(String(d.doc_no))}</span>
+                  <span class="text-gray-700">${he(d.description||'')}${d.vendor?` <span class="text-gray-400">· ${he(d.vendor)}</span>`:''}</span>
+                </div>`).join('')}
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="text-xs font-semibold text-gray-500 mb-1.5 block">ชื่อผู้รับเอกสาร</label>
+              <input type="text" id="vtConfirmerName" placeholder="ชื่อ-นามสกุล ผู้รับเอกสาร"
+                class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand bg-white">
+            </div>
+            <button onclick="confirmByToken()" id="vtConfirmBtn"
+              class="w-full py-3 bg-success text-white rounded-xl text-sm font-semibold hover:bg-emerald-800 transition flex items-center justify-center gap-2 card-shadow-md">
+              <i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร
+            </button>`;
+          lucide.createIcons();
+        }
+      } catch(e) { toast('เกิดข้อผิดพลาด กรุณาลองใหม่'); }
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="search" class="w-4 h-4"></i> ค้นหาเอกสาร'; lucide.createIcons(); }
+    }
+
+    async function confirmByToken() {
+      if (!VT.plan) return;
+      const name = document.getElementById('vtConfirmerName')?.value.trim();
+      if (!name) { toast('กรุณาระบุชื่อผู้รับเอกสาร'); return; }
+      const btn = document.getElementById('vtConfirmBtn');
+      btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> กำลังบันทึก...'; lucide.createIcons();
+      try {
+        const token = getVtToken();
+        const res = await api('confirmByToken', { plan_id: VT.plan.id, token, confirmed_by: name });
+        if (res.ok) {
+          const idx = PLANS.findIndex(p => p.id === VT.plan.id);
+          if (idx !== -1) { PLANS[idx].status = 'done'; PLANS[idx].signer = name; }
+          cacheDel('plans:' + (CU?.name || '') + ':' + (CU?.role || ''));
+          VT = { plan: null, docs: [] };
+          document.getElementById('verifyTokenBody').innerHTML = `
+            <div class="flex flex-col items-center justify-center text-center py-20">
+              <div class="w-16 h-16 rounded-full bg-success-light flex items-center justify-center mb-4">
+                <i data-lucide="check-circle" class="w-8 h-8 text-success"></i>
+              </div>
+              <p class="font-bold text-gray-900 text-lg mb-1">รับเอกสารสำเร็จ</p>
+              <p class="text-sm text-gray-400">ผู้รับ: ${he(name)}</p>
+            </div>`;
+          lucide.createIcons();
+        }
+      } catch(e) { toast('เกิดข้อผิดพลาด กรุณาลองใหม่'); btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; lucide.createIcons(); }
     }
 
     // ===== LEAVE FLOW =====
