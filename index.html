@@ -474,6 +474,61 @@
     </div>
   </div>
 
+  <!-- Leave Modal (ฝากเอกสาร) -->
+  <div id="leaveModal"
+    class="fixed inset-0 flex items-end justify-center pointer-events-none opacity-0 transition-opacity duration-200"
+    style="z-index:300;">
+    <div class="absolute inset-0 bg-black/40" onclick="closeLeaveModal()"></div>
+    <div class="relative w-full bg-white rounded-t-2xl p-6" style="max-width:480px;padding-bottom:max(24px,env(safe-area-inset-bottom));">
+      <div class="flex items-center gap-2 mb-4">
+        <i data-lucide="map-pin" class="w-5 h-5 text-warn"></i>
+        <h3 class="font-bold text-gray-900 text-base">ฝากเอกสาร</h3>
+      </div>
+      <div class="space-y-3 mb-5">
+        <div>
+          <label class="text-xs font-semibold text-gray-500 mb-1.5 block">สถานที่ฝาก</label>
+          <input type="text" id="leaveLocation" placeholder="เช่น โต๊ะรับส่งเอกสาร ห้อง GA"
+            class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand bg-gray-50/50">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-gray-500 mb-1.5 block">ฝากกับ (ชื่อ)</label>
+          <input type="text" id="leaveWith" placeholder="ชื่อผู้รับฝาก เช่น คุณสมชาย"
+            class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand bg-gray-50/50">
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="closeLeaveModal()"
+          class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">ยกเลิก</button>
+        <button onclick="submitLeave()" id="leaveSubmitBtn"
+          class="flex-1 py-2.5 rounded-xl bg-warn text-white text-sm font-semibold hover:bg-amber-600 transition shadow-sm">ยืนยันฝาก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leave Token Result Modal -->
+  <div id="leaveTokenModal"
+    class="fixed inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200 px-6"
+    style="z-index:310;">
+    <div class="absolute inset-0 bg-black/60"></div>
+    <div class="relative w-full bg-white rounded-2xl p-6 text-center" style="max-width:320px;">
+      <div class="w-14 h-14 rounded-full bg-warn-light flex items-center justify-center mx-auto mb-3">
+        <i data-lucide="key" class="w-7 h-7 text-warn"></i>
+      </div>
+      <p class="font-bold text-gray-900 text-base mb-1">ฝากเอกสารสำเร็จ</p>
+      <p class="text-xs text-gray-400 mb-4">แจ้ง Token นี้ให้ผู้รับเอกสาร</p>
+      <div class="bg-gray-50 rounded-2xl py-5 px-4 mb-2">
+        <p class="text-5xl font-bold tracking-[0.2em] text-gray-900" id="leaveTokenDisplay">0000</p>
+      </div>
+      <p class="text-xs text-gray-400 mb-4" id="leaveTokenExpiry"></p>
+      <button onclick="copyLeaveToken()" id="copyTokenBtn"
+        class="w-full py-2.5 rounded-xl border-2 border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition mb-3 flex items-center justify-center gap-2">
+        <i data-lucide="copy" class="w-4 h-4"></i> คัดลอก Token
+      </button>
+      <button onclick="closeLeaveTokenModal()"
+        class="w-full py-2.5 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-blue-800 transition">ปิด</button>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div id="toast"
     class="fixed left-1/2 -translate-x-1/2 px-5 py-3 bg-gray-900 text-white text-sm font-medium rounded-xl card-shadow-md transition-all duration-300 opacity-0 pointer-events-none"
@@ -631,6 +686,20 @@
           const { error } = await supabaseClient.from(table).delete().eq('name', params.name);
           if (error) throw error;
           return { ok: true };
+        }
+
+        if (action === 'leavePlan') {
+          const token = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+          const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+          const { error } = await supabaseClient.from('plans').update({
+            status: 'left',
+            left_location: params.left_location,
+            left_with: params.left_with,
+            sign_token: token,
+            token_expires_at: expires
+          }).eq('p_id', params.plan_id);
+          if (error) throw error;
+          return { ok: true, token, expires_at: expires };
         }
 
         if (action === 'deletePlan') {
@@ -1171,6 +1240,9 @@
     </div>
     <button onclick="submitReceive()" class="w-full py-3 bg-success text-white rounded-xl text-sm font-semibold hover:bg-emerald-800 transition flex items-center justify-center gap-2 card-shadow-md" id="rdConfirmBtn">
       <i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร
+    </button>
+    <button onclick="openLeaveModal()" class="w-full py-2.5 mt-2 border-2 border-dashed border-amber-200 text-amber-600 rounded-xl text-sm font-medium hover:bg-amber-50 transition flex items-center justify-center gap-2">
+      <i data-lucide="map-pin" class="w-4 h-4"></i> ไม่มีคนรับ — ฝากเอกสาร
     </button>`;
       goScreen('receive-detail'); lucide.createIcons(); initSign();
     }
@@ -1661,8 +1733,8 @@
     }
 
     // ===== UTILS =====
-    function statusTh(s) { return { ready: 'รอรับ', partial: 'รับบางส่วน', done: 'ครบแล้ว' }[s] || s; }
-    function statusStyle(s) { return { ready: 'bg-blue-50 text-brand', partial: 'bg-warn-light text-warn', done: 'bg-success-light text-success' }[s] || ''; }
+    function statusTh(s) { return { ready: 'รอรับ', partial: 'รับบางส่วน', done: 'ครบแล้ว', left: 'ฝากไว้', expired: 'หมดอายุ', cancelled: 'ยกเลิก' }[s] || s; }
+    function statusStyle(s) { return { ready: 'bg-blue-50 text-brand', partial: 'bg-warn-light text-warn', done: 'bg-success-light text-success', left: 'bg-amber-50 text-amber-600', expired: 'bg-gray-100 text-gray-500', cancelled: 'bg-red-50 text-red-500' }[s] || ''; }
     function fd(d) { if (!d) return ''; try { if (typeof d === 'string' && d.includes('/')) return d; const dt = new Date(d); if (isNaN(dt)) return d; return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear() + 543}`; } catch (e) { return d || ''; } }
     function fa(n) { if (!n) return ''; return Number(n).toLocaleString('th-TH'); }
     function faShort(n) { if (!n) return '0'; if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'; if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K'; return fa(n); }
@@ -1769,6 +1841,70 @@
         }
       } catch (e) { toast('\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14'); }
       btn.disabled = false; btn.textContent = '\u0e25\u0e1a\u0e40\u0e25\u0e22';
+    }
+
+    // ===== LEAVE FLOW =====
+    let _leaveToken = '';
+
+    function openLeaveModal() {
+      document.getElementById('leaveLocation').value = '';
+      document.getElementById('leaveWith').value = '';
+      const m = document.getElementById('leaveModal');
+      m.classList.remove('pointer-events-none', 'opacity-0');
+      m.classList.add('pointer-events-auto', 'opacity-100');
+      lucide.createIcons();
+    }
+
+    function closeLeaveModal() {
+      const m = document.getElementById('leaveModal');
+      m.classList.add('pointer-events-none', 'opacity-0');
+      m.classList.remove('pointer-events-auto', 'opacity-100');
+    }
+
+    async function submitLeave() {
+      const location = document.getElementById('leaveLocation').value.trim();
+      const withPerson = document.getElementById('leaveWith').value.trim();
+      if (!location) { toast('กรุณาระบุสถานที่ฝาก'); return; }
+      if (!withPerson) { toast('กรุณาระบุชื่อผู้รับฝาก'); return; }
+      const btn = document.getElementById('leaveSubmitBtn');
+      btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+      try {
+        const res = await api('leavePlan', { plan_id: CP.id, left_location: location, left_with: withPerson });
+        if (res.ok) {
+          _leaveToken = res.token;
+          CP.status = 'left';
+          const idx = PLANS.findIndex(p => p.id === CP.id);
+          if (idx !== -1) { PLANS[idx].status = 'left'; }
+          cacheDel('plans:' + CU.name + ':' + CU.role);
+          closeLeaveModal();
+          closeReceiveDetail();
+          // แสดง Token
+          document.getElementById('leaveTokenDisplay').textContent = res.token;
+          const exp = new Date(res.expires_at);
+          const expStr = exp.toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
+          document.getElementById('leaveTokenExpiry').textContent = 'Token หมดอายุ ' + expStr + ' น.';
+          const tm = document.getElementById('leaveTokenModal');
+          tm.classList.remove('pointer-events-none', 'opacity-0');
+          tm.classList.add('pointer-events-auto', 'opacity-100');
+          lucide.createIcons();
+        }
+      } catch (e) { toast('ฝากเอกสารไม่สำเร็จ กรุณาลองใหม่'); }
+      btn.disabled = false; btn.textContent = 'ยืนยันฝาก';
+    }
+
+    function closeLeaveTokenModal() {
+      const m = document.getElementById('leaveTokenModal');
+      m.classList.add('pointer-events-none', 'opacity-0');
+      m.classList.remove('pointer-events-auto', 'opacity-100');
+    }
+
+    function copyLeaveToken() {
+      if (!_leaveToken) return;
+      navigator.clipboard.writeText(_leaveToken).then(() => {
+        const btn = document.getElementById('copyTokenBtn');
+        btn.innerHTML = '✓ คัดลอกแล้ว';
+        setTimeout(() => { btn.innerHTML = '<i data-lucide="copy" class="w-4 h-4"></i> คัดลอก Token'; lucide.createIcons(); }, 1500);
+      }).catch(() => toast('คัดลอกไม่ได้ กรุณาจดไว้ด้วยตัวเอง'));
     }
 
     init();
