@@ -639,7 +639,7 @@
             newlyExpired.forEach(r => {
               supabaseClient.functions.invoke('send-email', {
                 body: { type: 'plan_expired', plan_id: r.p_id, plan_name: r.name, dept: r.dept, created_by: r.created_by }
-              }).catch(() => {});
+              }).catch(e => console.error('[email:expired]', r.p_id, e));
             });
           }
           const expiredIds = new Set(newlyExpired.map(r => r.p_id));
@@ -1438,6 +1438,7 @@
       const c = document.getElementById('signatureCanvas'); if (!c) return;
       const dpr = window.devicePixelRatio || 1;
       const r = c.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) { requestAnimationFrame(initSign); return; }
       c.width = Math.round(r.width * dpr);
       c.height = Math.round(r.height * dpr);
       sctx = c.getContext('2d');
@@ -2145,7 +2146,7 @@
           const msg = res.error === 'expired'
             ? 'Token หมดอายุแล้ว กรุณาติดต่อ GA เพื่อขอ Token ใหม่'
             : 'ไม่พบเอกสารสำหรับ Token นี้ หรืออาจรับไปแล้ว';
-          result.innerHTML = `<div class="bg-red-50 border border-red-100 rounded-xl p-4 text-center"><p class="text-sm text-red-600 font-medium">${msg}</p></div>`;
+          result.innerHTML = `<div class="bg-red-50 border border-red-100 rounded-xl p-4 text-center"><p class="text-sm text-red-600 font-medium">${he(msg)}</p></div>`;
           VT = { plan: null, docs: [] };
         } else {
           VT = { plan: res.plan, docs: res.docs };
