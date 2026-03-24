@@ -545,6 +545,29 @@
     </div>
   </div>
 
+  <!-- Cancel Plan Confirmation Modal -->
+  <div id="cancelPlanModal"
+    class="fixed inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200 px-6"
+    style="z-index:300;">
+    <div class="absolute inset-0 bg-black/40" onclick="closeCancelPlanModal()"></div>
+    <div class="relative w-full bg-white rounded-2xl p-6" style="max-width:320px;">
+      <div class="flex flex-col items-center text-center mb-5">
+        <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-3">
+          <i data-lucide="x-circle" class="w-6 h-6 text-red-500"></i>
+        </div>
+        <p class="font-semibold text-gray-900 text-base">ยกเลิกแผนงานนี้?</p>
+        <p id="cancelPlanName" class="text-sm text-brand font-medium mt-1"></p>
+        <p class="text-xs text-gray-400 mt-1">สถานะจะเปลี่ยนเป็น "ยกเลิก" และไม่สามารถนำไปรับเอกสารได้อีก</p>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="closeCancelPlanModal()"
+          class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">ไม่ยกเลิก</button>
+        <button onclick="executeCancelPlan()"
+          class="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition" id="cancelPlanBtn">ยืนยันยกเลิก</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div id="toast"
     class="fixed left-1/2 -translate-x-1/2 px-5 py-3 bg-gray-900 text-white text-sm font-medium rounded-xl card-shadow-md transition-all duration-300 opacity-0 pointer-events-none"
@@ -745,6 +768,14 @@
           }).eq('p_id', params.plan_id);
           if (error) throw error;
           return { ok: true, token, expires_at: expires };
+        }
+
+        if (action === 'cancelPlan') {
+          const { error } = await supabaseClient.from('plans')
+            .update({ status: 'cancelled' })
+            .eq('p_id', params.plan_id);
+          if (error) throw error;
+          return { ok: true };
         }
 
         if (action === 'deletePlan') {
@@ -1782,7 +1813,11 @@
       <label class="text-xs font-medium text-gray-500 mb-1.5 block">ลายเซ็น</label>
       <div class="border border-gray-200 rounded-lg overflow-hidden bg-gray-50" id="sigView"></div>
     </div>`:
-          `<div class="bg-gray-50 rounded-xl p-4 text-center text-sm text-gray-400">ยังไม่มีการรับเอกสาร</div>`}`;
+          `<div class="bg-gray-50 rounded-xl p-4 text-center text-sm text-gray-400">ยังไม่มีการรับเอกสาร</div>`}
+    ${['ready','partial','left'].includes(p.status) && (CU.role === 'mgr' || p.createdBy === CU.name) ? `
+    <button onclick="promptCancelPlan()" class="w-full mt-2 py-2.5 border-2 border-dashed border-red-200 text-red-500 rounded-xl text-sm font-medium hover:bg-red-50 transition flex items-center justify-center gap-2">
+      <i data-lucide="x-circle" class="w-4 h-4"></i> ยกเลิกแผนงานนี้
+    </button>` : ''}`;
       goScreen('batch'); lucide.createIcons();
       const deleteBtn = document.getElementById('deletePlanBtnHeader');
       if (deleteBtn) deleteBtn.style.display = CU.role === 'mgr' ? 'flex' : 'none';
@@ -1811,6 +1846,37 @@
       const m = document.getElementById('deletePlanModal');
       m.classList.add('pointer-events-none'); m.classList.remove('opacity-100');
     }
+    function promptCancelPlan() {
+      if (!CP) return;
+      document.getElementById('cancelPlanName').textContent = CP.name;
+      const m = document.getElementById('cancelPlanModal');
+      m.classList.remove('pointer-events-none'); m.classList.add('opacity-100');
+      lucide.createIcons();
+    }
+    function closeCancelPlanModal() {
+      const m = document.getElementById('cancelPlanModal');
+      m.classList.add('pointer-events-none'); m.classList.remove('opacity-100');
+    }
+    async function executeCancelPlan() {
+      if (!CP) return;
+      const btn = document.getElementById('cancelPlanBtn');
+      btn.disabled = true; btn.textContent = 'กำลังยกเลิก...';
+      try {
+        const res = await api('cancelPlan', { plan_id: CP.id });
+        if (res.ok) {
+          CP.status = 'cancelled';
+          const cached = PLANS.find(p => p.id === CP.id);
+          if (cached) cached.status = 'cancelled';
+          cacheDel('plans:' + CU.name + ':' + CU.role);
+          toast('ยกเลิกแผนงานเรียบร้อย ✓');
+          closeCancelPlanModal();
+          closeBatch();
+          if (CU.role === 'mgr') renderMgrDash(); else renderHistory();
+        }
+      } catch (e) { toast('เกิดข้อผิดพลาด ลองใหม่'); }
+      btn.disabled = false; btn.textContent = 'ยืนยันยกเลิก';
+    }
+
     async function executeDeletePlan() {
       if (!CP) return;
       const btn = document.getElementById('deletePlanBtn');
