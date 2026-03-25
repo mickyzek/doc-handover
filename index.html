@@ -23,13 +23,30 @@
     }
   </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap');
+
+    :root {
+      --gd-brand: #185FA5;
+      --gd-brand-strong: #144e88;
+      --gd-brand-soft: #E8F0FA;
+      --gd-surface: #F7F7F5;
+      --gd-card: #FFFFFF;
+      --gd-text: #0F172A;
+      --gd-muted: #64748B;
+      --gd-border: #E2E8F0;
+      --gd-radius-card: 16px;
+      --gd-radius-control: 12px;
+      --gd-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 1px rgba(15, 23, 42, 0.03);
+      --gd-shadow-md: 0 8px 22px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.05);
+    }
 
     html,
     body {
       height: 100%;
       margin: 0;
-      font-family: 'Inter', 'Prompt', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Noto Sans Thai', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--gd-text);
+      background: var(--gd-surface);
     }
 
     * {
@@ -47,11 +64,11 @@
     }
 
     .card-shadow {
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+      box-shadow: var(--gd-shadow-sm);
     }
 
     .card-shadow-md {
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--gd-shadow-md);
     }
 
     .pin-dot {
@@ -93,7 +110,7 @@
     .numpad-key {
       width: 72px;
       height: 52px;
-      border-radius: 12px;
+      border-radius: var(--gd-radius-control);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -101,18 +118,20 @@
       font-weight: 600;
       color: #1E293B;
       cursor: pointer;
-      transition: background 0.1s;
+      transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
       user-select: none;
       -webkit-user-select: none;
+      border: 1px solid transparent;
     }
 
     .numpad-key:active {
       background: #E2E8F0;
+      transform: scale(0.98);
     }
 
     .tab-active {
-      color: #185FA5;
-      border-bottom: 2.5px solid #185FA5;
+      color: var(--gd-brand);
+      border-bottom: 2.5px solid var(--gd-brand);
       font-weight: 600;
     }
 
@@ -122,22 +141,28 @@
     }
 
     .chip {
-      padding: 6px 14px;
+      padding: 7px 14px;
       border-radius: 20px;
       font-size: 13px;
       font-weight: 500;
       white-space: nowrap;
       cursor: pointer;
-      transition: all 0.15s;
-      border: 1.5px solid #E2E8F0;
+      transition: all 0.2s ease;
+      border: 1.5px solid var(--gd-border);
       background: white;
-      color: #64748B;
+      color: var(--gd-muted);
     }
 
     .chip.active {
-      background: #185FA5;
+      background: var(--gd-brand);
       color: white;
-      border-color: #185FA5;
+      border-color: var(--gd-brand);
+      box-shadow: 0 8px 16px rgba(24, 95, 165, 0.18);
+    }
+
+    .chip:hover {
+      border-color: #bfdbfe;
+      color: #334155;
     }
 
     .fade-in {
@@ -159,7 +184,39 @@
     input,
     select,
     textarea {
-      font-family: 'Inter', 'Prompt', sans-serif;
+      font-family: 'Noto Sans Thai', 'Inter', sans-serif;
+      border-radius: var(--gd-radius-control);
+      border-color: var(--gd-border);
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #93c5fd !important;
+      box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.12);
+      background: #fff;
+    }
+
+    button {
+      transition: all 0.18s ease;
+      font-family: 'Noto Sans Thai', 'Inter', sans-serif;
+    }
+
+    button:active {
+      transform: translateY(0.5px) scale(0.99);
+    }
+
+    .bg-white.rounded-xl.card-shadow,
+    .bg-white.rounded-2xl,
+    .stat-card {
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: var(--gd-radius-card);
+    }
+
+    .bg-white.rounded-xl.card-shadow:hover {
+      box-shadow: var(--gd-shadow-md);
     }
 
     .badge-count {
@@ -216,7 +273,7 @@
 
     .login-shell {
       min-height: 100%;
-      padding: 24px 16px 32px;
+      padding: 24px 18px 32px;
       background:
         radial-gradient(circle at 14% 10%, rgba(191, 219, 254, 0.95) 0%, rgba(147, 197, 253, 0.18) 34%, rgba(37, 99, 235, 0) 58%),
         radial-gradient(circle at 100% 0%, rgba(96, 165, 250, 0.35) 0%, rgba(29, 78, 216, 0) 48%),
@@ -291,6 +348,15 @@
     .token-cta:active {
       transform: scale(0.987);
       box-shadow: 0 10px 20px rgba(202, 138, 4, 0.3);
+    }
+
+    #mainTabBar .main-tab {
+      letter-spacing: 0.01em;
+    }
+
+    #mainTabBar .main-tab:hover {
+      color: var(--gd-brand);
+      background: rgba(232, 240, 250, 0.65);
     }
   </style>
 </head>
@@ -740,7 +806,7 @@
   <!-- Toast -->
   <div id="toast"
     class="fixed left-1/2 -translate-x-1/2 px-5 py-3 bg-gray-900 text-white text-sm font-medium rounded-xl card-shadow-md transition-all duration-300 opacity-0 pointer-events-none"
-    style="bottom:max(24px, calc(env(safe-area-inset-bottom) + 16px));z-index:200;max-width:360px;font-family:'Inter','Prompt',sans-serif;">
+    style="bottom:max(24px, calc(env(safe-area-inset-bottom) + 16px));z-index:200;max-width:360px;font-family:'Noto Sans Thai','Inter',sans-serif;">
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
