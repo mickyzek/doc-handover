@@ -2396,8 +2396,8 @@
           initSign();
         }
       } catch(e) { toast('เกิดข้อผิดพลาด กรุณาลองใหม่'); }
-      const numpad = document.getElementById('vtNumpad');
-      if (numpad) numpad.style.pointerEvents = '';
+      const numpadEl = document.getElementById('vtNumpad');
+      if (numpadEl) numpadEl.style.pointerEvents = '';
       vtUpdateDisplay();
     }
 
