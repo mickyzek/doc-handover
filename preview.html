@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>UI Style Preview — Doc Handover</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -117,14 +120,44 @@ p.sub { text-align: center; font-size: 13px; color: #555; margin-bottom: 40px; }
 .s4 .num { background: #fff; border: 2px solid #000; border-radius: 6px; padding: 11px 0; text-align: center; font-size: 20px; font-weight: 800; color: #000; box-shadow: 3px 3px 0 #000; }
 .s4 .btn { background: #185FA5; color: #fff; border: 2.5px solid #000; border-radius: 8px; padding: 13px; width: 100%; font-size: 14px; font-weight: 800; font-family: inherit; cursor: pointer; box-shadow: 4px 4px 0 #000; }
 
+/* ====== STYLE 5: Modern Enterprise ====== */
+.s5 { background: radial-gradient(120% 80% at 50% 0%, #1f2a44 0%, #0b1220 45%, #070b13 100%); }
+.s5 .topbar { padding: 18px 16px 14px; border-bottom: 1px solid rgba(148,163,184,0.25); backdrop-filter: blur(8px); background: rgba(7,11,19,0.55); }
+.s5 .topbar-title { font-size: 16px; font-weight: 700; color: #f8fafc; letter-spacing: -0.2px; }
+.s5 .topbar-sub { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+.s5 .body { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.s5 .stat-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.s5 .stat { background: rgba(15,23,42,0.88); border: 1px solid rgba(148,163,184,0.24); border-radius: 14px; padding: 10px 8px; text-align: center; box-shadow: 0 8px 24px rgba(2,6,23,0.25); }
+.s5 .stat-num { font-size: 19px; font-weight: 800; color: #f8fafc; }
+.s5 .stat-lbl { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+.s5 .card { background: rgba(15,23,42,0.9); border: 1px solid rgba(148,163,184,0.22); border-radius: 14px; padding: 13px 14px; box-shadow: 0 8px 24px rgba(2,6,23,0.22); }
+.s5 .card-title { font-size: 13px; font-weight: 600; color: #f8fafc; }
+.s5 .card-sub { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+.s5 .row { display: flex; justify-content: space-between; align-items: center; }
+.s5 .amount { font-size: 12px; font-weight: 700; color: #bfdbfe; }
+.s5 .badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 999px; margin-top: 8px; border: 1px solid #1d4ed8; color: #dbeafe; background: rgba(29,78,216,0.2); }
+.s5 .badge.warn { border-color: #d97706; color: #fef3c7; background: rgba(217,119,6,0.2); }
+.s5 .pin-wrap { background: rgba(15,23,42,0.72); border: 1px solid rgba(148,163,184,0.22); border-radius: 14px; padding: 12px; }
+.s5 .pin-dots { display: flex; gap: 10px; justify-content: center; margin: 10px 0; }
+.s5 .dot { width: 11px; height: 11px; border-radius: 50%; background: #3b82f6; }
+.s5 .dot.empty { background: transparent; border: 1.5px solid rgba(148,163,184,0.6); }
+.s5 .numpad { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.s5 .num { background: rgba(15,23,42,0.95); border: 1px solid rgba(148,163,184,0.24); border-radius: 12px; padding: 11px 0; text-align: center; font-size: 19px; font-weight: 600; color: #e2e8f0; }
+
 .wrapper { background: #1a1a1a; border-radius: 16px; padding: 20px; }
 .label { color: #aaa; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
 .tag { font-size: 10px; background: #333; color: #888; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+.notice { max-width: 900px; margin: 0 auto 18px; border: 1px solid #3b82f6; background: rgba(30,64,175,0.22); color: #bfdbfe; border-radius: 12px; padding: 10px 12px; font-size: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.notice a { color: #dbeafe; font-weight: 700; text-decoration: none; border-bottom: 1px dashed rgba(219,234,254,0.7); }
 </style>
 </head>
 <body>
 <h1>UI Style Preview</h1>
-<p class="sub">เลือกทิศทางที่ชอบ แล้วแจ้งชื่อ style ได้เลย</p>
+<p class="sub">เลือกทิศทางที่ชอบ แล้วแจ้งชื่อ style ได้เลย (อัปเดตล่าสุด: 25 มี.ค. 2026)</p>
+<div class="notice">
+  <span>กำลังดู <strong>Preview v2</strong> ที่มี Style ⑤ แล้ว — ถ้ายังเห็นของเก่า ให้ hard refresh (Ctrl/Cmd + Shift + R)</span>
+  <a href="#style5">ไปที่ Style ⑤</a>
+</div>
 
 <div class="grid">
 
@@ -279,6 +312,45 @@ p.sub { text-align: center; font-size: 13px; color: #555; margin-bottom: 40px; }
           <div class="s4 numpad">
             <div class="s4 num">1</div><div class="s4 num">2</div><div class="s4 num">3</div>
             <div class="s4 num">4</div><div class="s4 num">5</div><div class="s4 num">6</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STYLE 5: Modern Enterprise -->
+  <div class="wrapper" id="style5">
+    <div class="label">⑤ Modern Enterprise <span class="tag">Recommended</span></div>
+    <div class="phone s5">
+      <div class="s5 topbar">
+        <div class="topbar-title">รับเอกสาร</div>
+        <div class="topbar-sub">UI ที่ปลอดภัยต่อระบบเดิม · Preview only</div>
+      </div>
+      <div class="s5 body">
+        <div class="s5 stat-row">
+          <div class="s5 stat"><div class="stat-num">12</div><div class="stat-lbl">ทั้งหมด</div></div>
+          <div class="s5 stat"><div class="stat-num" style="color:#4ade80">8</div><div class="stat-lbl">รับแล้ว</div></div>
+          <div class="s5 stat"><div class="stat-num" style="color:#f59e0b">3</div><div class="stat-lbl">รอรับ</div></div>
+        </div>
+        <div class="s5 card">
+          <div class="s5 row"><div class="card-title">ใบแจ้งหนี้มิ.ย.</div><div class="amount">฿24,500</div></div>
+          <div class="card-sub">ฝ่ายบัญชี • 3 รายการ</div>
+          <div class="s5 badge warn">รอรับ</div>
+        </div>
+        <div class="s5 card">
+          <div class="s5 row"><div class="card-title">สัญญาจ้างงาน</div><div class="amount">฿180,000</div></div>
+          <div class="card-sub">ฝ่าย HR • 2 รายการ</div>
+          <div class="s5 badge">รับแล้ว</div>
+        </div>
+        <div class="s5 pin-wrap">
+          <div class="card-title" style="font-size:12px;color:#94a3b8;margin-bottom:10px">กรอก PIN</div>
+          <div class="s5 pin-dots">
+            <div class="s5 dot"></div><div class="s5 dot"></div><div class="s5 dot"></div>
+            <div class="s5 dot empty"></div><div class="s5 dot empty"></div><div class="s5 dot empty"></div>
+          </div>
+          <div class="s5 numpad">
+            <div class="s5 num">1</div><div class="s5 num">2</div><div class="s5 num">3</div>
+            <div class="s5 num">4</div><div class="s5 num">5</div><div class="s5 num">6</div>
           </div>
         </div>
       </div>
