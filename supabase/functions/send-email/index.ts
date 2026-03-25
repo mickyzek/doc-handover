@@ -22,6 +22,23 @@ interface NotifyPayload {
   status?: 'done' | 'partial'
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function validatePayload(payload: NotifyPayload): string | null {
+  if (!isNonEmptyString(payload.plan_id)) return 'plan_id is required'
+  if (!isNonEmptyString(payload.plan_name)) return 'plan_name is required'
+  if (!isNonEmptyString(payload.dept)) return 'dept is required'
+  if (!isNonEmptyString(payload.created_by)) return 'created_by is required'
+
+  if (payload.type === 'plan_received' && payload.status && !['done', 'partial'].includes(payload.status)) {
+    return 'status must be done or partial'
+  }
+
+  return null
+}
+
 // ===== Resend =====
 async function sendEmail(to: string, subject: string, html: string) {
   const res = await fetch('https://api.resend.com/emails', {
@@ -107,11 +124,20 @@ function esc(s: string) {
 // ===== Main Handler =====
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ ok: false, error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+    })
+  }
 
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
   if (!RESEND_API_KEY) return json({ ok: false, error: 'RESEND_API_KEY not set' }, 500)
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return json({ ok: false, error: 'Supabase env vars not set' }, 500)
+  }
 
   let payload: NotifyPayload
   try {
@@ -123,6 +149,8 @@ Deno.serve(async (req) => {
   if (!['plan_received', 'plan_expired'].includes(payload.type)) {
     return json({ ok: false, error: `Unknown type: ${payload.type}` }, 400)
   }
+  const validationError = validatePayload(payload)
+  if (validationError) return json({ ok: false, error: validationError }, 400)
 
   const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
