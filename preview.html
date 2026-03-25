@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>UI Style Preview — Doc Handover</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -144,11 +147,17 @@ p.sub { text-align: center; font-size: 13px; color: #555; margin-bottom: 40px; }
 .wrapper { background: #1a1a1a; border-radius: 16px; padding: 20px; }
 .label { color: #aaa; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
 .tag { font-size: 10px; background: #333; color: #888; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+.notice { max-width: 900px; margin: 0 auto 18px; border: 1px solid #3b82f6; background: rgba(30,64,175,0.22); color: #bfdbfe; border-radius: 12px; padding: 10px 12px; font-size: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.notice a { color: #dbeafe; font-weight: 700; text-decoration: none; border-bottom: 1px dashed rgba(219,234,254,0.7); }
 </style>
 </head>
 <body>
 <h1>UI Style Preview</h1>
-<p class="sub">เลือกทิศทางที่ชอบ แล้วแจ้งชื่อ style ได้เลย</p>
+<p class="sub">เลือกทิศทางที่ชอบ แล้วแจ้งชื่อ style ได้เลย (อัปเดตล่าสุด: 25 มี.ค. 2026)</p>
+<div class="notice">
+  <span>กำลังดู <strong>Preview v2</strong> ที่มี Style ⑤ แล้ว — ถ้ายังเห็นของเก่า ให้ hard refresh (Ctrl/Cmd + Shift + R)</span>
+  <a href="#style5">ไปที่ Style ⑤</a>
+</div>
 
 <div class="grid">
 
@@ -310,7 +319,7 @@ p.sub { text-align: center; font-size: 13px; color: #555; margin-bottom: 40px; }
   </div>
 
   <!-- STYLE 5: Modern Enterprise -->
-  <div class="wrapper">
+  <div class="wrapper" id="style5">
     <div class="label">⑤ Modern Enterprise <span class="tag">Recommended</span></div>
     <div class="phone s5">
       <div class="s5 topbar">
