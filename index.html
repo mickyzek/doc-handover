@@ -1245,10 +1245,15 @@
           <div><label class="text-xs font-medium text-gray-500 mb-1 block">วันที่ส่ง</label>
             <input type="date" id="pDate" value="${new Date().toISOString().slice(0, 10)}" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand bg-gray-50/50"></div>
           <div><label class="text-xs font-medium text-gray-500 mb-1 block">แผนกปลายทาง</label>
-            <select id="pDept" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand bg-gray-50/50 appearance-none">
-              <option value="">เลือกแผนก</option><option>ฝ่ายบัญชี</option><option>ฝ่ายการเงิน</option><option>ฝ่ายจัดซื้อ</option><option>ฝ่ายบุคคล</option><option>ฝ่ายกฎหมาย</option>
-              <option value="__other__">อื่นๆ...</option>
-            </select></div>
+            <div class="relative">
+              <select id="pDept" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand bg-gray-50/50 appearance-none pr-8">
+                <option value="">เลือกแผนก</option><option>ฝ่ายบัญชี</option><option>ฝ่ายการเงิน</option><option>ฝ่ายจัดซื้อ</option><option>ฝ่ายบุคคล</option><option>ฝ่ายกฎหมาย</option>
+                <option value="__other__">อื่นๆ...</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-gray-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+              </div>
+            </div></div>
         </div>
         <div id="deptOtherWrap" style="display:none"><input type="text" id="pDeptOther" placeholder="ระบุแผนก" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand bg-gray-50/50"></div>
       </div>
