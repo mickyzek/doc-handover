@@ -682,7 +682,7 @@
 
         if (action === 'getPlans') {
           // Exclude sign_img for better performance in list views
-          let query = supabaseClient.from('plans').select('p_id, name, date, dept, created_by, status, signer, signed_at, token_expires_at, left_location, left_with');
+          let query = supabaseClient.from('plans').select('p_id, name, date, dept, created_by, status, signer, signed_at, token_expires_at, left_location, left_with, sign_token');
           if (params.role === 'ga') {
             query = query.eq('created_by', params.name);
           }
@@ -712,7 +712,8 @@
             sign_img: '', // Loaded on demand now
             signed_at: r.signed_at || '',
             left_location: r.left_location || '',
-            left_with: r.left_with || ''
+            left_with: r.left_with || '',
+            sign_token: r.sign_token || ''
           }));
         }
 
@@ -828,14 +829,26 @@
         }
 
         if (action === 'confirmByToken') {
+          const { data: plan } = await supabaseClient.from('plans')
+            .select('p_id').eq('p_id', params.plan_id)
+            .eq('sign_token', params.token).eq('status', 'left').maybeSingle();
+          if (!plan) return { ok: false, error: 'invalid_token' };
+          const all = (params.checked || []).every(c => c.received);
+          const status = all ? 'done' : 'partial';
           const { error } = await supabaseClient.from('plans').update({
-            status: 'done',
+            status,
             signer: params.confirmed_by,
-            signed_at: new Date().toISOString(),
+            sign_img: params.sign_img || '',
+            signed_at: params.signed_at || new Date().toISOString(),
             sign_token: null,
             token_expires_at: null
           }).eq('p_id', params.plan_id).eq('sign_token', params.token).eq('status', 'left');
           if (error) throw error;
+          for (const check of (params.checked || [])) {
+            await supabaseClient.from('documents')
+              .update({ is_received: check.received })
+              .eq('p_id', params.plan_id).eq('doc_no', check.no);
+          }
           return { ok: true };
         }
 
@@ -1099,7 +1112,7 @@
         if (res.ok) {
           PIN_ATTEMPTS = 0;
           CU = { ...SU };
-          PLANS = (plans || []).map(p => ({ id: p.plan_id, name: p.name, date: p.date, dept: p.dept, createdBy: p.created_by, status: p.status, signer: p.signer || '', ts: p.signed_at || '', leftLocation: p.left_location || '', leftWith: p.left_with || '', docs: [], checked: [], loaded: false }));
+          PLANS = (plans || []).map(p => ({ id: p.plan_id, name: p.name, date: p.date, dept: p.dept, createdBy: p.created_by, status: p.status, signer: p.signer || '', ts: p.signed_at || '', leftLocation: p.left_location || '', leftWith: p.left_with || '', token: p.sign_token || '', docs: [], checked: [], loaded: false }));
           if (cachedPlans) { api('getPlans', { name: CU.name, role: CU.role }).then(d => { cacheSet(planCacheKey, d); }).catch(() => { }); }
           else { cacheSet(planCacheKey, plans); }
           toast('ยินดีต้อนรับ ' + CU.name.split(' ')[0] + ' 👋');
@@ -1135,7 +1148,7 @@
     async function loadPlans() {
       document.getElementById('loadingMsg').textContent = '';
       const res = await api('getPlans', { name: CU.name, role: CU.role });
-      PLANS = res.map(p => ({ id: p.plan_id, name: p.name, date: p.date, dept: p.dept, createdBy: p.created_by, status: p.status, signer: p.signer || '', ts: p.signed_at || '', leftLocation: p.left_location || '', leftWith: p.left_with || '', docs: [], checked: [], loaded: false }));
+      PLANS = res.map(p => ({ id: p.plan_id, name: p.name, date: p.date, dept: p.dept, createdBy: p.created_by, status: p.status, signer: p.signer || '', ts: p.signed_at || '', leftLocation: p.left_location || '', leftWith: p.left_with || '', token: p.sign_token || '', docs: [], checked: [], loaded: false }));
     }
 
     async function loadDocs(pid) {
@@ -1364,7 +1377,12 @@
       <div class="chip ${RF === '' ? 'active' : ''}" onclick="setRF(this,'')">📋 ทั้งหมด <span class="badge-count inline-flex items-center justify-center ${RF === '' ? 'bg-white/30 text-white' : 'bg-brand text-white'} rounded-full ml-1">${pending.length}</span></div>
       ${Object.keys(dc).map(d => `<div class="chip ${RF === d ? 'active' : ''}" data-dept="${he(d)}" onclick="setRF(this, this.dataset.dept)">${dicon(d)} ${he(d.replace('ฝ่าย', ''))} <span class="badge-count inline-flex items-center justify-center bg-brand text-white rounded-full ml-1">${dc[d]}</span></div>`).join('')}
     </div>
-    <div class="px-4 pt-2 pb-6 space-y-3" id="rList"></div>`;
+    <div class="px-4 pb-2 flex justify-end">
+      <button onclick="openVerifyToken()" class="flex items-center gap-1.5 text-xs font-semibold text-amber-600 bg-amber-50 hover:bg-amber-100 transition px-3 py-1.5 rounded-lg">
+        <i data-lucide="key-round" class="w-3.5 h-3.5"></i> กรอก Token
+      </button>
+    </div>
+    <div class="px-4 pt-1 pb-6 space-y-3" id="rList"></div>`;
       renderRList();
       initPTR(el);
     }
@@ -1389,7 +1407,7 @@
           try {
             const plans = await api('getPlans', { name: CU.name, role: CU.role });
             cacheSet(key, plans);
-            PLANS = plans.map(p => { if (p.sign_img) SIGDATA[p.plan_id] = p.sign_img; return { id: p.plan_id, name: p.name, date: p.date, dept: p.dept, createdBy: p.created_by, status: p.status, signer: p.signer || '', ts: p.signed_at || '', leftLocation: p.left_location || '', leftWith: p.left_with || '', docs: [], checked: [], loaded: false }; });
+            PLANS = plans.map(p => { if (p.sign_img) SIGDATA[p.plan_id] = p.sign_img; return { id: p.plan_id, name: p.name, date: p.date, dept: p.dept, createdBy: p.created_by, status: p.status, signer: p.signer || '', ts: p.signed_at || '', leftLocation: p.left_location || '', leftWith: p.left_with || '', token: p.sign_token || '', docs: [], checked: [], loaded: false }; });
             RF = ''; renderReceiveTab();
             loadAllDocsBackground();
             toast('รีเฟรชแล้ว ✓');
@@ -1946,7 +1964,8 @@
     <div class="bg-amber-50 rounded-xl p-4 mb-4 border border-amber-100">
       <h4 class="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4 text-amber-600"></i> ข้อมูลการฝากเอกสาร</h4>
       <div class="flex gap-2 text-xs mb-1.5"><span class="text-gray-400 w-20 shrink-0">สถานที่ฝาก</span><span class="font-medium text-gray-700">${he(p.leftLocation || '-')}</span></div>
-      <div class="flex gap-2 text-xs"><span class="text-gray-400 w-20 shrink-0">ฝากกับ</span><span class="font-medium text-gray-700">${he(p.leftWith || '-')}</span></div>
+      <div class="flex gap-2 text-xs mb-1.5"><span class="text-gray-400 w-20 shrink-0">ฝากกับ</span><span class="font-medium text-gray-700">${he(p.leftWith || '-')}</span></div>
+      ${p.status === 'left' && p.token ? `<div class="flex gap-2 text-xs items-center mt-0.5"><span class="text-gray-400 w-20 shrink-0">Token</span><span class="font-bold tracking-widest text-amber-600 font-mono text-sm">${he(p.token)}</span></div>` : ''}
     </div>` : ''}
     ${p.status === 'expired' && (CU.role === 'mgr' || p.createdBy === CU.name) ? `
     <button onclick="genNewToken()" class="w-full mb-2 py-2.5 border-2 border-dashed border-amber-300 text-amber-700 rounded-xl text-sm font-medium hover:bg-amber-50 transition flex items-center justify-center gap-2">
@@ -2243,14 +2262,15 @@
     }
 
     // ===== VERIFY TOKEN FLOW =====
-    let VT = { plan: null, docs: [] };
+    let VT = { plan: null, docs: [], checked: [] };
+    let VT_TOKEN = '';
 
     function openVerifyToken(preToken = '') {
-      VT = { plan: null, docs: [] };
+      VT = { plan: null, docs: [], checked: [] };
+      VT_TOKEN = String(preToken || '').replace(/\D/g, '').slice(0, 4);
       const body = document.getElementById('verifyTokenBody');
-      const digits = (String(preToken || '') + '    ').slice(0, 4).split('');
       body.innerHTML = `
-        <div class="text-center mb-8">
+        <div class="text-center mb-6">
           <div class="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-3">
             <i data-lucide="key" class="w-7 h-7 text-warn"></i>
           </div>
@@ -2258,50 +2278,67 @@
           <p class="text-sm text-gray-400 mt-1">รับ Token จาก GA ผู้นำส่งเอกสาร</p>
         </div>
         <div class="flex gap-3 justify-center mb-6">
-          ${[0,1,2,3].map(i => `<input type="tel" inputmode="numeric" maxlength="1" id="vt${i}" value="${digits[i].trim()}"
-            class="w-14 h-16 text-center text-2xl font-bold border-2 border-gray-200 rounded-xl bg-white focus:border-brand focus:outline-none transition"
-            oninput="vtInput(this,${i})" onkeydown="vtKeydown(event,${i})">`).join('')}
+          ${[0,1,2,3].map(i => {
+            const filled = i < VT_TOKEN.length;
+            return `<div id="vtBox${i}" class="w-14 h-16 rounded-xl border-2 flex items-center justify-center text-2xl font-bold transition select-none ${filled ? 'border-brand text-brand bg-blue-50' : 'border-gray-200 text-gray-300 bg-white'}">${filled ? VT_TOKEN[i] : '—'}</div>`;
+          }).join('')}
         </div>
-        <button onclick="searchToken()" id="vtSearchBtn"
-          class="w-full py-3 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-blue-800 transition flex items-center justify-center gap-2 card-shadow-md mb-6">
-          <i data-lucide="search" class="w-4 h-4"></i> ค้นหาเอกสาร
-        </button>
+        <div class="grid grid-cols-3 gap-3 mb-4 max-w-xs mx-auto" id="vtNumpad">
+          ${['1','2','3','4','5','6','7','8','9','','0','del'].map(k => k === 'del'
+            ? `<div class="numpad-key flex items-center justify-center" onclick="vtDelete()"><i data-lucide="delete" class="w-5 h-5 text-gray-400"></i></div>`
+            : k === ''
+            ? `<div class="numpad-key opacity-0 pointer-events-none"></div>`
+            : `<div class="numpad-key flex items-center justify-center" onclick="vtEnter('${k}')">${k}</div>`
+          ).join('')}
+        </div>
         <div id="vtResult"></div>`;
       goScreen('verify-token');
       lucide.createIcons();
-      if (String(preToken).replace(/\D/g,'').length === 4) {
-        searchToken(String(preToken));
-      } else {
-        document.getElementById('vt0')?.focus();
-      }
+      if (VT_TOKEN.length === 4) searchToken();
     }
 
     function closeVerifyToken() {
-      VT = { plan: null, docs: [] };
+      VT = { plan: null, docs: [], checked: [] }; VT_TOKEN = '';
       goScreen('login');
       lucide.createIcons();
     }
 
-    function vtInput(el, idx) {
-      el.value = el.value.replace(/\D/g, '').slice(-1);
-      if (el.value && idx < 3) document.getElementById('vt' + (idx + 1))?.focus();
+    function vtUpdateDisplay() {
+      [0,1,2,3].forEach(i => {
+        const box = document.getElementById('vtBox' + i);
+        if (!box) return;
+        const filled = i < VT_TOKEN.length;
+        box.textContent = filled ? VT_TOKEN[i] : '—';
+        if (filled) { box.classList.add('border-brand','text-brand','bg-blue-50'); box.classList.remove('border-gray-200','text-gray-300','bg-white'); }
+        else { box.classList.remove('border-brand','text-brand','bg-blue-50'); box.classList.add('border-gray-200','text-gray-300','bg-white'); }
+      });
     }
 
-    function vtKeydown(e, idx) {
-      if (e.key === 'Backspace' && !e.target.value && idx > 0) document.getElementById('vt' + (idx - 1))?.focus();
-      if (e.key === 'Enter') searchToken();
+    function vtEnter(d) {
+      if (VT_TOKEN.length >= 4) return;
+      VT_TOKEN += d;
+      vtUpdateDisplay();
+      if (VT_TOKEN.length === 4) searchToken();
     }
 
-    function getVtToken() {
-      return [0,1,2,3].map(i => document.getElementById('vt' + i)?.value || '').join('');
+    function vtDelete() {
+      if (!VT_TOKEN.length) return;
+      VT_TOKEN = VT_TOKEN.slice(0, -1);
+      const r = document.getElementById('vtResult');
+      if (r) r.innerHTML = '';
+      VT = { plan: null, docs: [], checked: [] };
+      vtUpdateDisplay();
     }
 
-    async function searchToken(preToken) {
-      const token = preToken || getVtToken();
-      if (token.replace(/\s/g,'').length < 4) { toast('กรอก Token ให้ครบ 4 หลัก'); return; }
-      const btn = document.getElementById('vtSearchBtn');
-      if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> กำลังค้นหา...'; lucide.createIcons(); }
+    function getVtToken() { return VT_TOKEN; }
+
+    async function searchToken() {
+      const token = getVtToken();
+      if (token.length < 4) { toast('กรอก Token ให้ครบ 4 หลัก'); return; }
+      const numpad = document.getElementById('vtNumpad');
+      if (numpad) numpad.style.pointerEvents = 'none';
       const result = document.getElementById('vtResult');
+      result.innerHTML = `<div class="flex justify-center py-8"><svg class="animate-spin w-6 h-6 text-brand" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg></div>`;
       try {
         const res = await api('verifyToken', { token });
         if (!res.ok) {
@@ -2309,64 +2346,95 @@
             ? 'Token หมดอายุแล้ว กรุณาติดต่อ GA เพื่อขอ Token ใหม่'
             : 'ไม่พบเอกสารสำหรับ Token นี้ หรืออาจรับไปแล้ว';
           result.innerHTML = `<div class="bg-red-50 border border-red-100 rounded-xl p-4 text-center"><p class="text-sm text-red-600 font-medium">${he(msg)}</p></div>`;
-          VT = { plan: null, docs: [] };
+          VT = { plan: null, docs: [], checked: [] };
         } else {
-          VT = { plan: res.plan, docs: res.docs };
+          VT = { plan: res.plan, docs: res.docs, checked: res.docs.map(() => false) };
           const p = res.plan; const docs = res.docs;
           const dStr = p.date ? new Date(p.date).toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'2-digit' }) : '';
+          const tot = docs.reduce((a, d) => a + (d.amount || 0), 0);
           result.innerHTML = `
-            <div class="bg-white rounded-2xl card-shadow p-4 mb-4">
+            <div class="bg-white rounded-xl card-shadow p-4 mb-4">
               <div class="flex items-start justify-between mb-3">
                 <div><p class="font-bold text-gray-900 text-sm">${he(p.dept||'')}</p><p class="text-xs text-gray-400 mt-0.5">${he(p.name||'')} · ${dStr}</p></div>
                 <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-amber-50 text-amber-600 shrink-0">ฝากไว้</span>
               </div>
-              <div class="bg-gray-50 rounded-xl px-3 py-2.5 mb-3 space-y-1">
+              <div class="bg-gray-50 rounded-xl px-3 py-2.5 space-y-1">
                 <div class="flex gap-2 text-xs"><span class="text-gray-400 w-20 shrink-0">สถานที่ฝาก</span><span class="font-medium text-gray-700">${he(p.left_location||'-')}</span></div>
                 <div class="flex gap-2 text-xs"><span class="text-gray-400 w-20 shrink-0">ฝากกับ</span><span class="font-medium text-gray-700">${he(p.left_with||'-')}</span></div>
               </div>
-              <p class="text-xs font-semibold text-gray-500 mb-2">รายการเอกสาร (${docs.length} รายการ)</p>
-              <div class="space-y-1.5 mb-4">
-                ${docs.map(d => `<div class="flex items-start gap-2 text-xs">
-                  <span class="shrink-0 font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">${he(String(d.doc_no))}</span>
-                  <span class="text-gray-700">${he(d.description||'')}${d.vendor?` <span class="text-gray-400">· ${he(d.vendor)}</span>`:''}</span>
-                </div>`).join('')}
+            </div>
+            <div class="bg-white rounded-xl card-shadow p-4 mb-4">
+              <h4 class="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2"><i data-lucide="clipboard-check" class="w-4 h-4 text-brand"></i> รายการเอกสาร</h4>
+              <div class="space-y-2">
+                ${docs.map((d, i) => `<label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition">
+                  <input type="checkbox" onchange="vtTogDoc(${i},this.checked)" class="w-4 h-4 rounded border-gray-300 accent-[#185FA5]">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-800">${he(String(d.doc_no))}</p>
+                    <p class="text-xs text-gray-400">${[d.vendor, d.description].filter(Boolean).map(he).join(' • ')}</p>
+                  </div>
+                  ${d.amount ? `<span class="text-xs font-semibold text-gray-600">฿${fa(d.amount)}</span>` : ''}
+                </label>`).join('')}
+              </div>
+              ${tot ? `<div class="mt-3 pt-3 border-t border-gray-100 flex justify-between"><span class="text-xs text-gray-500 font-medium">มูลค่ารวม</span><span class="text-sm font-bold text-gray-900">฿${fa(tot)}</span></div>` : ''}
+            </div>
+            <div class="bg-white rounded-xl card-shadow p-4 mb-4">
+              <h4 class="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2"><i data-lucide="pen-tool" class="w-4 h-4 text-brand"></i> ลงนามผู้รับ</h4>
+              <label class="text-xs font-medium text-gray-500 mb-1.5 block">ชื่อผู้รับเอกสาร</label>
+              <input type="text" id="vtConfirmerName" placeholder="ชื่อ-นามสกุล ผู้รับเอกสาร"
+                class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand bg-gray-50/50 mb-3">
+              <label class="text-xs font-medium text-gray-500 mb-1.5 block">ลายเซ็น</label>
+              <div class="relative border border-gray-200 rounded-lg overflow-hidden bg-gray-50/50">
+                <canvas id="signatureCanvas" width="400" height="160" class="w-full" style="height:140px;"></canvas>
+                <button onclick="clearSign()" class="absolute top-2 right-2 px-2.5 py-1 bg-white rounded-md text-xs text-gray-400 hover:text-gray-600 card-shadow transition">ล้าง</button>
               </div>
             </div>
-            <div class="mb-3">
-              <label class="text-xs font-semibold text-gray-500 mb-1.5 block">ชื่อผู้รับเอกสาร</label>
-              <input type="text" id="vtConfirmerName" placeholder="ชื่อ-นามสกุล ผู้รับเอกสาร"
-                class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand bg-white">
-            </div>
             <button onclick="confirmByToken()" id="vtConfirmBtn"
-              class="w-full py-3 bg-success text-white rounded-xl text-sm font-semibold hover:bg-emerald-800 transition flex items-center justify-center gap-2 card-shadow-md">
+              class="w-full py-3 bg-success text-white rounded-xl text-sm font-semibold hover:bg-emerald-800 transition flex items-center justify-center gap-2 card-shadow-md mb-6">
               <i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร
             </button>`;
           lucide.createIcons();
+          initSign();
         }
       } catch(e) { toast('เกิดข้อผิดพลาด กรุณาลองใหม่'); }
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="search" class="w-4 h-4"></i> ค้นหาเอกสาร'; lucide.createIcons(); }
+      const numpad = document.getElementById('vtNumpad');
+      if (numpad) numpad.style.pointerEvents = '';
+      vtUpdateDisplay();
     }
+
+    function vtTogDoc(i, v) { if (VT) VT.checked[i] = v; }
 
     async function confirmByToken() {
       if (!VT.plan) return;
       const name = document.getElementById('vtConfirmerName')?.value.trim();
       if (!name) { toast('กรุณาระบุชื่อผู้รับเอกสาร'); return; }
+      if (!VT.checked.some(Boolean)) { toast('กรุณาติ๊กอย่างน้อย 1 รายการ'); return; }
       const btn = document.getElementById('vtConfirmBtn');
       btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> กำลังบันทึก...'; lucide.createIcons();
+      const canvas = document.getElementById('signatureCanvas');
+      let sig = '';
+      try { sig = (canvas && !isCanvasBlank(canvas)) ? canvas.toDataURL('image/jpeg', 0.6) : ''; } catch(e) {}
+      if (sig && sig.length > 200000) { toast('ลายเซ็นมีขนาดใหญ่เกินไป กรุณาล้างแล้ววาดใหม่'); btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; lucide.createIcons(); return; }
+      const now = new Date();
+      const ts = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()+543} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
       try {
-        const token = getVtToken();
-        const res = await api('confirmByToken', { plan_id: VT.plan.id, token, confirmed_by: name });
+        const res = await api('confirmByToken', {
+          plan_id: VT.plan.id, token: getVtToken(), confirmed_by: name,
+          sign_img: sig, signed_at: ts,
+          checked: VT.docs.map((d, i) => ({ no: d.doc_no, received: VT.checked[i] }))
+        });
         if (res.ok) {
+          const all = VT.checked.every(Boolean);
+          const newStatus = all ? 'done' : 'partial';
           const idx = PLANS.findIndex(p => p.id === VT.plan.id);
-          if (idx !== -1) { PLANS[idx].status = 'done'; PLANS[idx].signer = name; }
+          if (idx !== -1) { PLANS[idx].status = newStatus; PLANS[idx].signer = name; PLANS[idx].token = ''; }
           cacheDel('plans:' + (CU?.name || '') + ':' + (CU?.role || ''));
-          VT = { plan: null, docs: [] };
+          VT = { plan: null, docs: [], checked: [] }; VT_TOKEN = '';
           document.getElementById('verifyTokenBody').innerHTML = `
             <div class="flex flex-col items-center justify-center text-center py-20">
               <div class="w-16 h-16 rounded-full bg-success-light flex items-center justify-center mb-4">
                 <i data-lucide="check-circle" class="w-8 h-8 text-success"></i>
               </div>
-              <p class="font-bold text-gray-900 text-lg mb-1">รับเอกสารสำเร็จ</p>
+              <p class="font-bold text-gray-900 text-lg mb-1">${all ? 'รับเอกสารสำเร็จ' : 'บันทึกรับบางส่วนแล้ว'}</p>
               <p class="text-sm text-gray-400">ผู้รับ: ${he(name)}</p>
             </div>`;
           lucide.createIcons();
@@ -2419,7 +2487,8 @@
           CP.leftLocation = location;
           CP.leftWith = withPerson;
           const idx = PLANS.findIndex(p => p.id === CP.id);
-          if (idx !== -1) { PLANS[idx].status = 'left'; PLANS[idx].leftLocation = location; PLANS[idx].leftWith = withPerson; }
+          if (idx !== -1) { PLANS[idx].status = 'left'; PLANS[idx].leftLocation = location; PLANS[idx].leftWith = withPerson; PLANS[idx].token = res.token; }
+          CP.token = res.token;
           cacheDel('plans:' + CU.name + ':' + CU.role);
           closeLeaveModal();
           if (!_regenMode) closeReceiveDetail();
