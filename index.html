@@ -508,6 +508,86 @@
       background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
     }
 
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    .status-ready {
+      background: #EFF6FF;
+      color: #1D4ED8;
+      border-color: #BFDBFE;
+    }
+
+    .status-partial {
+      background: #FFFBEB;
+      color: #B45309;
+      border-color: #FDE68A;
+    }
+
+    .status-done {
+      background: #ECFDF3;
+      color: #047857;
+      border-color: #A7F3D0;
+    }
+
+    .status-left {
+      background: #F5F3FF;
+      color: #6D28D9;
+      border-color: #DDD6FE;
+    }
+
+    .status-cancelled {
+      background: #FEF2F2;
+      color: #B91C1C;
+      border-color: #FECACA;
+    }
+
+    .status-expired {
+      background: #F1F5F9;
+      color: #475569;
+      border-color: #CBD5E1;
+    }
+
+    .meta-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #64748B;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      padding: 4px 8px;
+      border-radius: 999px;
+    }
+
+    .toast-success { background: linear-gradient(135deg, #047857, #065F46); }
+    .toast-error { background: linear-gradient(135deg, #B91C1C, #991B1B); }
+    .toast-warning { background: linear-gradient(135deg, #B45309, #92400E); }
+    .toast-info { background: linear-gradient(135deg, #1E293B, #334155); }
+
+    .signal-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+
     @media (min-width: 1024px) {
       .gd-page {
         padding: 28px 32px 40px;
@@ -960,8 +1040,12 @@
 
   <!-- Toast -->
   <div id="toast"
-    class="fixed left-1/2 -translate-x-1/2 px-5 py-3 bg-gray-900 text-white text-sm font-medium rounded-xl card-shadow-md transition-all duration-300 opacity-0 pointer-events-none"
+    class="fixed left-1/2 -translate-x-1/2 px-4 py-3 text-white text-sm font-medium rounded-xl card-shadow-md transition-all duration-300 opacity-0 pointer-events-none toast-info"
     style="bottom:max(24px, calc(env(safe-area-inset-bottom) + 16px));z-index:200;max-width:360px;font-family:'Noto Sans Thai','Inter',sans-serif;">
+    <div class="flex items-center gap-2.5">
+      <i id="toastIcon" data-lucide="info" class="w-4 h-4"></i>
+      <p id="toastText" class="leading-tight"></p>
+    </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
@@ -1726,10 +1810,10 @@
         if (res.ok) {
           PLANS.unshift({ id: res.plan_id, name, date: date || new Date().toISOString().slice(0, 10), dept, createdBy: CU.name, status: 'ready', signer: '', ts: '', leftLocation: '', leftWith: '', docs, checked: docs.map(() => false), loaded: true });
           cacheDel('plans:' + CU.name + ':' + CU.role);
-          toast('ส่งเอกสารเรียบร้อยแล้ว ✓');
+          toast('Create สำเร็จ: สร้างแผนและส่งเอกสารเรียบร้อยแล้ว', 'success');
           renderSend();
         }
-      } catch (e) { console.error('[submitPlan]', e); toast('ส่งเอกสารไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่'); }
+      } catch (e) { console.error('[submitPlan]', e); toast('Create ไม่สำเร็จ: ตรวจสอบการเชื่อมต่อแล้วลองใหม่', 'error'); }
       if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="send" class="w-4 h-4"></i> ส่งเอกสาร'; }
       lucide.createIcons();
     }
@@ -1737,6 +1821,9 @@
     // ===== RECEIVE TAB =====
     function renderReceiveTab() {
       const pending = PLANS.filter(p => p.status === 'ready' || p.status === 'partial');
+      const readyCount = pending.filter(p => p.status === 'ready').length;
+      const partialCount = pending.filter(p => p.status === 'partial').length;
+      const totalDocs = pending.reduce((n, p) => n + p.docs.length, 0);
       const dc = {}; pending.forEach(p => { dc[p.dept] = (dc[p.dept] || 0) + 1; });
       const el = document.getElementById('tab-receive');
       el.innerHTML = `
@@ -1748,6 +1835,20 @@
       <p class="text-sm text-slate-500 mt-1">ตรวจสอบรายการเอกสารที่รอรับจากทุกแผนก</p>
     </div>
     <div class="gd-surface">
+    <div class="signal-grid">
+      <div class="gd-card-soft p-3">
+        <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Ready</p>
+        <p class="text-lg font-bold text-blue-700 mt-1">${readyCount}</p>
+      </div>
+      <div class="gd-card-soft p-3">
+        <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Partial</p>
+        <p class="text-lg font-bold text-amber-700 mt-1">${partialCount}</p>
+      </div>
+      <div class="gd-card-soft p-3">
+        <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Docs</p>
+        <p class="text-lg font-bold text-slate-800 mt-1">${totalDocs}</p>
+      </div>
+    </div>
     <div class="overflow-x-auto flex gap-2 pb-2" style="scrollbar-width:none;">
       <div class="chip ${RF === '' ? 'active' : ''}" onclick="setRF(this,'')">📋 ทั้งหมด <span class="badge-count inline-flex items-center justify-center ${RF === '' ? 'bg-white/30 text-white' : 'bg-brand text-white'} rounded-full ml-1">${pending.length}</span></div>
       ${Object.keys(dc).map(d => `<div class="chip ${RF === d ? 'active' : ''}" data-dept="${he(d)}" onclick="setRF(this, this.dataset.dept)">${dicon(d)} ${he(d.replace('ฝ่าย', ''))} <span class="badge-count inline-flex items-center justify-center bg-brand text-white rounded-full ml-1">${dc[d]}</span></div>`).join('')}
@@ -1782,8 +1883,8 @@
             PLANS = plans.map(p => { if (p.sign_img) SIGDATA[p.plan_id] = p.sign_img; return { id: p.plan_id, name: p.name, date: p.date, dept: p.dept, createdBy: p.created_by, status: p.status, signer: p.signer || '', ts: p.signed_at || '', leftLocation: p.left_location || '', leftWith: p.left_with || '', token: p.sign_token || '', docs: [], checked: [], loaded: false }; });
             RF = ''; renderReceiveTab();
             loadAllDocsBackground();
-            toast('รีเฟรชแล้ว ✓');
-          } catch (e) { console.error('[refresh]', e); toast('รีเฟรชไม่สำเร็จ ลองใหม่'); RF = ''; renderReceiveTab(); }
+            toast('อัปเดตข้อมูลล่าสุดเรียบร้อยแล้ว', 'success');
+          } catch (e) { console.error('[refresh]', e); toast('อัปเดตข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); RF = ''; renderReceiveTab(); }
         }
       }, { passive: true });
     }
@@ -1801,9 +1902,9 @@
       const list = PLANS.filter(p => (p.status === 'ready' || p.status === 'partial') && (!RF || p.dept === RF));
       if (!list.length) {
         el.innerHTML = `<div class="text-center py-14 flex flex-col items-center gap-3 fade-in gd-empty">
-    <div class="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center text-3xl">📭</div>
-    <p class="font-semibold text-gray-500 text-sm">ไม่มีเอกสารรอรับ</p>
-    <p class="text-xs text-gray-400">${RF ? 'สำหรับ ' + he(RF) : 'ทุกแผนก'}</p>
+    <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center"><i data-lucide="inbox" class="w-8 h-8 text-slate-400"></i></div>
+    <p class="font-semibold text-slate-600 text-sm">ไม่มีเอกสารรอรับในตอนนี้</p>
+    <p class="text-xs text-slate-400">${RF ? 'ตัวกรอง: ' + he(RF) : 'ทุกแผนก'} • สถานะพร้อมดำเนินการ</p>
   </div>`; return;
       }
       el.innerHTML = list.map(p => {
@@ -1813,13 +1914,18 @@
       <div class="flex items-start justify-between mb-3">
         <div><p class="font-semibold text-gray-900 text-base">${he(p.name)}</p>
         <p class="text-xs text-gray-400 mt-1">${dicon(p.dept)} ${he(p.dept)} • ส่งโดย ${he(p.createdBy.split(' ')[0])}</p></div>
-        <span class="text-xs px-2.5 py-1 rounded-full font-medium ${statusStyle(p.status)}">${statusTh(p.status)}</span>
+        ${statusBadge(p.status)}
       </div>
       <div class="flex items-center justify-between">
         <p class="text-xs text-gray-400">${fd(p.date)}</p>
         ${tot ? `<p class="text-sm font-semibold text-gray-700">฿${fa(tot)}</p>` : ''}
       </div>
-      ${p.status === 'partial' ? `<div class="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-amber-400 rounded-full" style="width:${prog}%"></div></div>` : ''}
+      <div class="mt-3 flex items-center gap-2 flex-wrap">
+        <span class="meta-chip"><i data-lucide="files" class="w-3 h-3"></i>${p.docs.length} เอกสาร</span>
+        ${tot ? `<span class="meta-chip"><i data-lucide="banknote" class="w-3 h-3"></i>฿${fa(tot)}</span>` : ''}
+        ${p.status === 'partial' ? `<span class="meta-chip"><i data-lucide="activity" class="w-3 h-3"></i>รับแล้ว ${prog}%</span>` : ''}
+      </div>
+      ${p.status === 'partial' ? `<div class="mt-2 h-1.5 bg-amber-100 rounded-full overflow-hidden"><div class="h-full bg-amber-500 rounded-full" style="width:${prog}%"></div></div>` : ''}
     </div>`;
       }).join('');
     }
@@ -1830,8 +1936,7 @@
       if (!CP.loaded) {
         document.getElementById('rdModal-name').textContent = CP.name;
         document.getElementById('rdModal-meta').textContent = `${CP.dept} • กำลังโหลด...`;
-        document.getElementById('rdModal-badge').className = 'text-xs px-2.5 py-1 rounded-full font-medium ' + statusStyle(CP.status);
-        document.getElementById('rdModal-badge').textContent = statusTh(CP.status);
+        renderStatusInto('rdModal-badge', CP.status);
         document.getElementById('rdModal-body').innerHTML = skeletonReceiveDetail();
         goScreen('receive-detail');
         await loadDocs(id);
@@ -1843,8 +1948,7 @@
       const p = CP, tot = p.docs.reduce((a, d) => a + (d.amount || 0), 0);
       document.getElementById('rdModal-name').textContent = p.name;
       document.getElementById('rdModal-meta').textContent = `${p.dept} • ${p.docs.length} รายการ`;
-      document.getElementById('rdModal-badge').className = `text-xs px-2.5 py-1 rounded-full font-medium ${statusStyle(p.status)}`;
-      document.getElementById('rdModal-badge').textContent = statusTh(p.status);
+      renderStatusInto('rdModal-badge', p.status);
       document.getElementById('rdModal-body').innerHTML = `
     <div class="gd-card p-6 mb-5">
       <h4 class="font-semibold text-gray-900 text-base mb-4 flex items-center gap-2"><i data-lucide="clipboard-check" class="w-4 h-4 text-brand"></i> รายการเอกสาร</h4>
@@ -1952,9 +2056,9 @@
         cacheDel('docs:' + CP.id);
         cacheDel('plans:' + CU.name + ':' + CU.role);
         sendNotify('plan_received', { plan_id: CP.id, plan_name: CP.name, dept: CP.dept, created_by: CP.createdBy, signer: name, signed_at: ts, status });
-        toast(all ? 'ยืนยันรับครบทุกรายการแล้ว ✓' : 'บันทึกรับบางส่วนแล้ว ✓');
+        toast(all ? 'Confirm สำเร็จ: รับเอกสารครบทุกฉบับแล้ว' : 'Receive สำเร็จ: บันทึกรับเอกสารบางส่วนแล้ว', 'success');
         closeReceiveDetail();
-      } catch (e) { console.error('[submitReceive]', e); toast('บันทึกการรับไม่สำเร็จ กรุณาลองใหม่'); if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; btn.className = btn.className.replace('bg-warn hover:bg-amber-700', 'bg-success hover:bg-emerald-800'); lucide.createIcons(); } }
+      } catch (e) { console.error('[submitReceive]', e); toast('Receive ไม่สำเร็จ: บันทึกการรับเอกสารไม่สำเร็จ', 'error'); if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; btn.className = btn.className.replace('bg-warn hover:bg-amber-700', 'bg-success hover:bg-emerald-800'); lucide.createIcons(); } }
     }
 
     // ===== HISTORY TAB =====
@@ -1996,11 +2100,11 @@
     function renderHistDash() {
       const isMgr = CU.role === 'mgr', base = getBase();
       const src = isMgr && GF ? base.filter(p => p.createdBy === GF) : base;
-      const total = src.length, done = src.filter(p => p.status === 'done').length, partial = src.filter(p => p.status === 'partial').length, pend = src.filter(p => p.status === 'ready').length;
+      const total = src.length, done = src.filter(p => p.status === 'done').length, partial = src.filter(p => p.status === 'partial').length, pend = src.filter(p => p.status === 'ready').length, inProgress = src.filter(p => p.status === 'left').length, cancelled = src.filter(p => p.status === 'cancelled').length, expired = src.filter(p => p.status === 'expired').length;
       const tAmt = src.reduce((a, p) => a + p.docs.reduce((b, d) => b + (d.amount || 0), 0), 0);
       const rAmt = src.reduce((a, p) => a + p.docs.filter((_, i) => p.checked[i]).reduce((b, d) => b + (d.amount || 0), 0), 0);
       const dm = {}; src.forEach(p => { if (!dm[p.dept]) dm[p.dept] = { done: 0, partial: 0, pend: 0, total: 0 }; dm[p.dept][p.status === 'done' ? 'done' : p.status === 'partial' ? 'partial' : 'pend']++; dm[p.dept].total++; });
-      const pct = total ? Math.round(done / total * 100) : 0;
+      const pct = total ? Math.round((done + partial) / total * 100) : 0;
 
       document.getElementById('hist-body').innerHTML = `
     ${!isMgr ? `<div class="flex items-center gap-2 mb-4 p-3 bg-brand-light rounded-xl"><div class="w-7 h-7 rounded-full ${CU.av.bg} ${CU.av.tc} flex items-center justify-center font-bold text-xs">${ini(CU.name)}</div><span class="text-xs text-gray-600">แสดงเฉพาะแผนของ <strong>${CU.name}</strong></span></div>` : ''}
@@ -2035,7 +2139,10 @@
         <div class="space-y-2.5 flex-1">
           <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-success flex-shrink-0"></div><span class="text-xs text-gray-600 flex-1">ครบแล้ว</span><span class="text-xs font-semibold text-gray-900">${done}</span></div>
           <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-warn flex-shrink-0"></div><span class="text-xs text-gray-600 flex-1">รับบางส่วน</span><span class="text-xs font-semibold text-gray-900">${partial}</span></div>
-          <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-brand flex-shrink-0"></div><span class="text-xs text-gray-600 flex-1">รอรับ</span><span class="text-xs font-semibold text-gray-900">${pend}</span></div>
+          <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-brand flex-shrink-0"></div><span class="text-xs text-gray-600 flex-1">Ready</span><span class="text-xs font-semibold text-gray-900">${pend}</span></div>
+          <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-violet-500 flex-shrink-0"></div><span class="text-xs text-gray-600 flex-1">In progress</span><span class="text-xs font-semibold text-gray-900">${inProgress}</span></div>
+          <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-slate-400 flex-shrink-0"></div><span class="text-xs text-gray-600 flex-1">Expired</span><span class="text-xs font-semibold text-gray-900">${expired}</span></div>
+          <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-red-500 flex-shrink-0"></div><span class="text-xs text-gray-600 flex-1">Cancelled</span><span class="text-xs font-semibold text-gray-900">${cancelled}</span></div>
         </div>
       </div>
     </div>
@@ -2106,7 +2213,7 @@
         return `<div class="gd-card p-4 fade-in cursor-pointer hover:shadow-md transition" data-id="${he(p.id)}" onclick="openBatch(this.dataset.id)">
           <div class="flex items-start justify-between mb-1.5">
             <p class="font-semibold text-gray-900 text-sm">${he(p.name)}</p>
-            <span class="text-xs px-2 py-0.5 rounded-full font-medium ${statusStyle(p.status)}">${statusTh(p.status)}</span>
+            ${statusBadge(p.status)}
           </div>
           <p class="text-xs text-gray-400">${he(p.dept)} • ${fd(p.date)}${isMgr ? ' • ' + he(p.createdBy.split(' ')[0]) : ''}</p>
           ${tot ? `<p class="text-sm font-semibold text-gray-700 mt-1">฿${fa(tot)}</p>` : ''}
@@ -2118,7 +2225,10 @@
             </div>`).join('')}
           </div>`: ''}
         </div>`;
-      }).join('') : '<div class="text-center py-12 text-gray-400 text-sm gd-empty">ไม่พบข้อมูล</div>'}
+      }).join('') : `<div class="text-center py-12 text-slate-500 text-sm gd-empty fade-in">
+      <div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-2"><i data-lucide="search-x" class="w-5 h-5 text-slate-400"></i></div>
+      ไม่พบข้อมูลที่ตรงกับตัวกรองหรือคำค้นหา
+    </div>`}
     </div>`;
 
       lucide.createIcons();
@@ -2241,13 +2351,13 @@
 
     // ===== MGR DASHBOARD =====
     function renderMgrDash() {
-      const total = PLANS.length, done = PLANS.filter(p => p.status === 'done').length, partial = PLANS.filter(p => p.status === 'partial').length, pend = PLANS.filter(p => p.status === 'ready').length;
+      const total = PLANS.length, done = PLANS.filter(p => p.status === 'done').length, partial = PLANS.filter(p => p.status === 'partial').length, pend = PLANS.filter(p => p.status === 'ready').length, inProgress = PLANS.filter(p => p.status === 'left').length, cancelled = PLANS.filter(p => p.status === 'cancelled').length, expired = PLANS.filter(p => p.status === 'expired').length;
       const tAmt = PLANS.reduce((a, p) => a + p.docs.reduce((b, d) => b + (d.amount || 0), 0), 0);
       const rAmt = PLANS.reduce((a, p) => a + p.docs.filter((_, i) => p.checked[i]).reduce((b, d) => b + (d.amount || 0), 0), 0);
       const gaS = AU.ga.map((g, i) => { const mp = PLANS.filter(p => p.createdBy === g.name), a = avc(i); return { ...g, av: a, total: mp.length, done: mp.filter(p => p.status === 'done').length, pend: mp.filter(p => p.status === 'ready').length, amt: mp.reduce((s, p) => s + p.docs.reduce((b, d) => b + (d.amount || 0), 0), 0) }; }).filter(g => g.total > 0);
       const maxA = Math.max(...gaS.map(g => g.amt), 1);
       const dm = {}; PLANS.forEach(p => { if (!dm[p.dept]) dm[p.dept] = { done: 0, partial: 0, pend: 0, total: 0 }; dm[p.dept][p.status === 'done' ? 'done' : p.status === 'partial' ? 'partial' : 'pend']++; dm[p.dept].total++; });
-      const pct = total ? Math.round(done / total * 100) : 0;
+      const pct = total ? Math.round((done + partial) / total * 100) : 0;
 
       document.getElementById('tab-mgrdash').innerHTML = `
     <div class="grid grid-cols-2 gap-3 mb-4">
@@ -2266,7 +2376,10 @@
         <div class="space-y-2.5 flex-1">
           <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-success"></div><span class="text-xs text-gray-600 flex-1">ครบแล้ว</span><span class="text-xs font-semibold">${done}</span></div>
           <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-warn"></div><span class="text-xs text-gray-600 flex-1">รับบางส่วน</span><span class="text-xs font-semibold">${partial}</span></div>
-          <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-brand"></div><span class="text-xs text-gray-600 flex-1">รอรับ</span><span class="text-xs font-semibold">${pend}</span></div>
+          <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-brand"></div><span class="text-xs text-gray-600 flex-1">Ready</span><span class="text-xs font-semibold">${pend}</span></div>
+          <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-violet-500"></div><span class="text-xs text-gray-600 flex-1">In progress</span><span class="text-xs font-semibold">${inProgress}</span></div>
+          <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-slate-400"></div><span class="text-xs text-gray-600 flex-1">Expired</span><span class="text-xs font-semibold">${expired}</span></div>
+          <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-red-500"></div><span class="text-xs text-gray-600 flex-1">Cancelled</span><span class="text-xs font-semibold">${cancelled}</span></div>
         </div>
       </div>
     </div>
@@ -2287,7 +2400,7 @@
     </div>
     <h4 class="font-semibold text-gray-900 text-sm mb-3 px-1">แผนที่ยังค้างอยู่</h4>
     ${PLANS.filter(p => p.status !== 'done').map(p => `<div class="gd-card p-4 mb-3 cursor-pointer hover:shadow-md transition" data-id="${he(p.id)}" onclick="openBatch(this.dataset.id)">
-      <div class="flex items-start justify-between mb-1"><p class="font-semibold text-gray-900 text-sm">${he(p.name)}</p><span class="text-xs px-2 py-0.5 rounded-full font-medium ${statusStyle(p.status)}">${statusTh(p.status)}</span></div>
+      <div class="flex items-start justify-between mb-1"><p class="font-semibold text-gray-900 text-sm">${he(p.name)}</p>${statusBadge(p.status)}</div>
       <p class="text-xs text-gray-400">${he(p.dept)} • ${he(p.createdBy.split(' ')[0])} • ${fd(p.date)}</p>
     </div>`).join('')}`;
 
@@ -2312,9 +2425,7 @@
       const rcv = p.docs.filter((_, i) => p.checked[i]).reduce((a, d) => a + (d.amount || 0), 0);
       document.getElementById('batchModal-name').textContent = p.name;
       document.getElementById('batchModal-meta').textContent = `${p.dept} • ${fd(p.date)} • สร้างโดย ${p.createdBy}`;
-      const b = document.getElementById('batchModal-badge');
-      b.className = `text-xs px-2.5 py-1 rounded-full font-medium ${statusStyle(p.status)}`;
-      b.textContent = statusTh(p.status);
+      renderStatusInto('batchModal-badge', p.status);
       document.getElementById('batchModal-body').innerHTML = `
     <div class="gd-card p-4 mb-4">
       <h4 class="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2"><i data-lucide="clipboard-list" class="w-4 h-4 text-brand"></i> รายการเอกสาร</h4>
@@ -2402,12 +2513,12 @@
           const cached = PLANS.find(p => p.id === CP.id);
           if (cached) cached.status = 'cancelled';
           cacheDel('plans:' + CU.name + ':' + CU.role);
-          toast('ยกเลิกแผนงานเรียบร้อย ✓');
+          toast('Cancel สำเร็จ: แผนงานถูกเปลี่ยนเป็นยกเลิกแล้ว', 'success');
           closeCancelPlanModal();
           closeBatch();
           if (CU.role === 'mgr') renderMgrDash(); else renderHistory();
         }
-      } catch (e) { console.error('[cancelPlan]', e); toast('เกิดข้อผิดพลาด ลองใหม่'); }
+      } catch (e) { console.error('[cancelPlan]', e); toast('Cancel ไม่สำเร็จ: เกิดข้อผิดพลาด กรุณาลองใหม่', 'error'); }
       btn.disabled = false; btn.textContent = 'ยืนยันยกเลิก';
     }
 
@@ -2420,22 +2531,45 @@
         if (res.ok) {
           PLANS = PLANS.filter(p => p.id !== CP.id);
           cacheDel('plans:' + CU.name + ':' + CU.role);
-          toast('ลบแผนงานเรียบร้อย ✓');
+          toast('Delete สำเร็จ: ลบแผนงานเรียบร้อยแล้ว', 'success');
           closeDeletePlanModal();
           closeBatch();
           renderHistory();
         }
-      } catch (e) { console.error('[deletePlan]', e); toast('ลบแผนงานไม่สำเร็จ กรุณาลองใหม่'); }
+      } catch (e) { console.error('[deletePlan]', e); toast('Delete ไม่สำเร็จ: ลบแผนงานไม่สำเร็จ', 'error'); }
       btn.disabled = false; btn.textContent = 'ลบเลย';
     }
 
     // ===== UTILS =====
-    function statusTh(s) { return { ready: 'รอรับ', partial: 'รับบางส่วน', done: 'ครบแล้ว', left: 'ฝากไว้', expired: 'หมดอายุ', cancelled: 'ยกเลิก' }[s] || s; }
-    function statusStyle(s) { return { ready: 'bg-blue-50 text-brand', partial: 'bg-warn-light text-warn', done: 'bg-success-light text-success', left: 'bg-amber-50 text-amber-600', expired: 'bg-gray-100 text-gray-500', cancelled: 'bg-red-50 text-red-500' }[s] || ''; }
+    function statusTh(s) { return { ready: 'Ready', partial: 'Partial', done: 'Completed', left: 'In progress', expired: 'Expired', cancelled: 'Cancelled' }[s] || s; }
+    function statusLabelTh(s) { return { ready: 'รอรับ', partial: 'รับบางส่วน', done: 'เสร็จสมบูรณ์', left: 'กำลังดำเนินการ', expired: 'หมดอายุ', cancelled: 'ยกเลิก' }[s] || s; }
+    function statusStyle(s) { return { ready: 'status-ready', partial: 'status-partial', done: 'status-done', left: 'status-left', expired: 'status-expired', cancelled: 'status-cancelled' }[s] || 'status-expired'; }
+    function statusDotColor(s) { return { ready: 'bg-blue-500', partial: 'bg-amber-500', done: 'bg-emerald-500', left: 'bg-violet-500', expired: 'bg-slate-400', cancelled: 'bg-red-500' }[s] || 'bg-slate-400'; }
+    function statusBadge(s) {
+      return `<span class="status-badge ${statusStyle(s)}"><span class="status-dot ${statusDotColor(s)}"></span>${statusLabelTh(s)}</span>`;
+    }
+    function renderStatusInto(id, s) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = statusBadge(s);
+    }
     function fd(d) { if (!d) return ''; try { if (typeof d === 'string' && d.includes('/')) return d; const dt = new Date(d); if (isNaN(dt)) return d; return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear() + 543}`; } catch (e) { return d || ''; } }
     function fa(n) { if (!n) return ''; return Number(n).toLocaleString('th-TH'); }
     function faShort(n) { if (!n) return '0'; if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'; if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K'; return fa(n); }
-    function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.style.opacity = '1'; t.style.pointerEvents = 'auto'; setTimeout(() => { t.style.opacity = '0'; t.style.pointerEvents = 'none'; }, 2500); }
+    function toast(msg, tone = 'info') {
+      const t = document.getElementById('toast');
+      const icon = document.getElementById('toastIcon');
+      const text = document.getElementById('toastText');
+      if (!t || !icon || !text) return;
+      text.textContent = msg;
+      t.classList.remove('toast-success', 'toast-error', 'toast-warning', 'toast-info');
+      const iconMap = { success: 'check-circle-2', error: 'x-circle', warning: 'alert-triangle', info: 'info' };
+      t.classList.add(`toast-${tone in iconMap ? tone : 'info'}`);
+      icon.setAttribute('data-lucide', iconMap[tone] || 'info');
+      lucide.createIcons();
+      t.style.opacity = '1';
+      t.style.pointerEvents = 'auto';
+      setTimeout(() => { t.style.opacity = '0'; t.style.pointerEvents = 'none'; }, 2600);
+    }
 
     // ===== USER MANAGEMENT =====
     function renderUserManagement() {
@@ -2824,6 +2958,7 @@
           if (idx !== -1) { PLANS[idx].status = newStatus; PLANS[idx].signer = name; PLANS[idx].token = ''; }
           cacheDel('plans:' + (CU?.name || '') + ':' + (CU?.role || ''));
           VT = { plan: null, docs: [], checked: [] }; VT_TOKEN = '';
+          toast(all ? 'Confirm สำเร็จ: รับเอกสารครบถ้วนแล้ว' : 'Confirm สำเร็จ: บันทึกรับบางส่วนแล้ว', 'success');
           document.getElementById('verifyTokenBody').innerHTML = `
             <div class="flex flex-col items-center justify-center text-center py-20">
               <div class="w-16 h-16 rounded-full bg-success-light flex items-center justify-center mb-4">
@@ -2834,7 +2969,7 @@
             </div>`;
           lucide.createIcons();
         }
-      } catch(e) { console.error('[confirmByToken]', e); toast('เกิดข้อผิดพลาด กรุณาลองใหม่'); btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; lucide.createIcons(); }
+      } catch(e) { console.error('[confirmByToken]', e); toast('Confirm ไม่สำเร็จ: เกิดข้อผิดพลาด กรุณาลองใหม่', 'error'); btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; lucide.createIcons(); }
     }
 
     // ===== LEAVE FLOW =====
