@@ -959,6 +959,13 @@
             </div>
             <p class="text-sm text-gray-400 font-medium">กำลังโหลด...</p>
             <p id="loadingMsg" class="text-xs text-gray-300"></p>
+            <p id="loadingSlowHint" class="hidden text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
+              เครือข่ายช้า กำลังพยายามเชื่อมต่อ...
+            </p>
+            <button id="loadingRetryBtn" onclick="init(true)"
+              class="hidden mt-1 px-4 py-2 text-sm font-semibold gd-btn-secondary">
+              ลองใหม่
+            </button>
           </div>
         </div>
       </div>
@@ -1659,6 +1666,8 @@
 
     // ===== CACHE =====
     const CACHE_TTL = 10 * 60 * 1000; // 10 นาที
+    const SLOW_NETWORK_MS = 2500;
+    const LOADING_TIMEOUT_MS = 5000;
     function cacheSet(key, val) { try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), v: val })); } catch (e) { } }
     function cacheGet(key) { try { const c = JSON.parse(localStorage.getItem(key) || 'null'); if (c && Date.now() - c.t < CACHE_TTL) return c.v; } catch (e) { } return null; }
     function cacheDel(key) { try { localStorage.removeItem(key); } catch (e) { } }
@@ -1712,25 +1721,92 @@
 
     // ===== INIT =====
     let _initRetries = 0;
-    async function init() {
+    async function withTimeout(task, opts = {}) {
+      const timeoutMs = opts.timeoutMs ?? LOADING_TIMEOUT_MS;
+      const slowMs = opts.slowMs ?? SLOW_NETWORK_MS;
+      let settled = false;
+      let slowTimer = null;
+      let timeoutTimer = null;
+      return new Promise((resolve, reject) => {
+        slowTimer = setTimeout(() => { if (!settled && opts.onSlow) opts.onSlow(); }, slowMs);
+        timeoutTimer = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          const err = new Error(opts.timeoutMessage || 'โหลดข้อมูลนานเกินกำหนด');
+          err.code = 'TIMEOUT';
+          if (opts.onTimeout) opts.onTimeout();
+          clearTimeout(slowTimer);
+          reject(err);
+        }, timeoutMs);
+
+        Promise.resolve(task).then(res => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(slowTimer);
+          clearTimeout(timeoutTimer);
+          resolve(res);
+        }).catch(err => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(slowTimer);
+          clearTimeout(timeoutTimer);
+          reject(err);
+        });
+      });
+    }
+
+    function setLoadingNetworkState(state, msg = '') {
+      const loadingMsg = document.getElementById('loadingMsg');
+      const slowHint = document.getElementById('loadingSlowHint');
+      const retryBtn = document.getElementById('loadingRetryBtn');
+      if (!loadingMsg || !slowHint || !retryBtn) return;
+      if (state === 'loading') {
+        loadingMsg.textContent = msg || 'กำลังดึงข้อมูลผู้ใช้...';
+        slowHint.classList.add('hidden');
+        retryBtn.classList.add('hidden');
+        return;
+      }
+      if (state === 'slow') {
+        loadingMsg.textContent = msg || 'กำลังโหลดข้อมูล อาจใช้เวลานานกว่าปกติ';
+        slowHint.classList.remove('hidden');
+        retryBtn.classList.add('hidden');
+        return;
+      }
+      if (state === 'timeout') {
+        loadingMsg.textContent = msg || 'โหลดข้อมูลเกิน 5 วินาที กรุณาลองใหม่';
+        slowHint.classList.remove('hidden');
+        retryBtn.classList.remove('hidden');
+      }
+    }
+
+    async function init(forceRefresh = false) {
       const urlToken = new URLSearchParams(window.location.search).get('token');
       if (urlToken) { openVerifyToken(urlToken); return; }
       goScreen('loading');
-      const cached = cacheGet('users');
+      setLoadingNetworkState('loading', 'กำลังดึงข้อมูลผู้ใช้...');
+      const cached = forceRefresh ? null : cacheGet('users');
       if (cached) { AU = cached; buildLoginScreen(); goScreen('login'); lucide.createIcons(); api('getUsers').then(d => { cacheSet('users', d); }).catch(() => { }); return; }
-      document.getElementById('loadingMsg').textContent = 'กำลังดึงข้อมูลผู้ใช้...';
       try {
-        AU = await api('getUsers');
+        AU = await withTimeout(api('getUsers'), {
+          onSlow: () => setLoadingNetworkState('slow', 'เครือข่ายช้า กำลังดึงข้อมูลผู้ใช้...'),
+          onTimeout: () => setLoadingNetworkState('timeout'),
+          timeoutMessage: 'โหลดข้อมูลผู้ใช้นานเกิน 5 วินาที'
+        });
         cacheSet('users', AU);
         buildLoginScreen();
         goScreen('login');
         lucide.createIcons();
+        _initRetries = 0;
       } catch (e) {
         _initRetries++;
-        if (_initRetries >= 5) {
-          document.getElementById('loadingMsg').textContent = 'ไม่สามารถเชื่อมต่อได้ กรุณารีเฟรชหน้า';
+        if (e && e.code === 'TIMEOUT') {
+          setLoadingNetworkState('timeout');
+          return;
+        }
+        if (_initRetries >= 3) {
+          setLoadingNetworkState('timeout', 'ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่');
         } else {
-          document.getElementById('loadingMsg').textContent = `เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง... (${_initRetries}/5)`;
+          setLoadingNetworkState('slow', `เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง... (${_initRetries}/3)`);
           setTimeout(() => init(), 3000);
         }
       }
@@ -1895,7 +1971,13 @@
         const plansProm = _plansPrefetch
           ? _plansPrefetch.then(d => d || (cachedPlans ? cachedPlans : api('getPlans', { name: SU.name, role: SU.role })))
           : (cachedPlans ? Promise.resolve(cachedPlans) : api('getPlans', { name: SU.name, role: SU.role }));
-        const [res, plans] = await Promise.all([verifyProm, plansProm]);
+        const [res, plans] = await withTimeout(Promise.all([verifyProm, plansProm]), {
+          onSlow: () => {
+            document.getElementById('pin-error').innerHTML = `<span class="text-amber-600 flex items-center justify-center gap-1.5"><i data-lucide="wifi-off" class="w-3.5 h-3.5"></i> เครือข่ายช้า กำลังพยายามเชื่อมต่อ...</span>`;
+            lucide.createIcons();
+          },
+          timeoutMessage: 'ตรวจสอบ PIN นานเกิน 5 วินาที'
+        });
         if (res.ok) {
           PIN_ATTEMPTS = 0;
           CU = { ...SU };
@@ -1925,7 +2007,9 @@
           }, 700);
         }
       } catch (e) {
-        document.getElementById('pin-error').textContent = 'เกิดข้อผิดพลาด ลองใหม่';
+        document.getElementById('pin-error').textContent = e && e.code === 'TIMEOUT'
+          ? 'เครือข่ายช้าเกินไป กรุณาลองใหม่'
+          : 'เกิดข้อผิดพลาด ลองใหม่';
         setTimeout(() => { PB = ''; updatePinDots(); document.getElementById('pin-error').textContent = ''; }, 1200);
       }
       document.querySelectorAll('#screen-pin .numpad-key').forEach(b => b.style.pointerEvents = '');
@@ -1934,7 +2018,9 @@
     // ===== LOAD PLANS =====
     async function loadPlans() {
       document.getElementById('loadingMsg').textContent = '';
-      const res = await api('getPlans', { name: CU.name, role: CU.role });
+      const res = await withTimeout(api('getPlans', { name: CU.name, role: CU.role }), {
+        timeoutMessage: 'โหลดรายการแผนงานนานเกิน 5 วินาที'
+      });
       PLANS = res.map(p => ({ id: p.plan_id, name: p.name, date: p.date, dept: p.dept, createdBy: p.created_by, status: p.status, signer: p.signer || '', ts: p.signed_at || '', leftLocation: p.left_location || '', leftWith: p.left_with || '', token: p.sign_token || '', docs: [], checked: [], loaded: false }));
     }
 
@@ -1943,7 +2029,9 @@
       try {
         const ckey = 'docs:' + pid;
         const cached = cacheGet(ckey);
-        const docs = cached || await api('getDocs', { plan_id: pid });
+        const docs = cached || await withTimeout(api('getDocs', { plan_id: pid }), {
+          timeoutMessage: 'โหลดรายการเอกสารนานเกิน 5 วินาที'
+        });
         if (!cached) cacheSet(ckey, docs);
         p.docs = docs.map(d => ({ no: String(d.doc_no || ''), vendor: String(d.vendor || ''), desc: String(d.description || ''), amount: Number(d.amount) || 0 }));
         p.checked = docs.map(d => d.is_received === 'true' || d.is_received === true);
