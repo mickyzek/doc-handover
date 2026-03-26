@@ -26,18 +26,19 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap');
 
     :root {
-      --gd-brand: #185FA5;
-      --gd-brand-strong: #144e88;
-      --gd-brand-soft: #E8F0FA;
-      --gd-surface: #F7F7F5;
+      --gd-brand: #2563EB;
+      --gd-brand-strong: #1E40AF;
+      --gd-brand-soft: #EAF1FF;
+      --gd-surface: #F4F7FC;
       --gd-card: #FFFFFF;
       --gd-text: #0F172A;
       --gd-muted: #64748B;
       --gd-border: #E2E8F0;
-      --gd-radius-card: 16px;
-      --gd-radius-control: 12px;
-      --gd-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 1px rgba(15, 23, 42, 0.03);
-      --gd-shadow-md: 0 8px 22px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.05);
+      --gd-radius-card: 24px;
+      --gd-radius-control: 10px;
+      --gd-shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.05);
+      --gd-shadow-md: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --gd-shadow-hover: 0 15px 40px rgba(15, 23, 42, 0.12);
     }
 
     html,
@@ -130,34 +131,37 @@
     }
 
     .tab-active {
-      color: var(--gd-brand);
-      border-bottom: 2.5px solid var(--gd-brand);
-      font-weight: 600;
+      color: #0f172a;
+      border: 1px solid #dbeafe;
+      background: linear-gradient(160deg, #ffffff 0%, #f8fbff 100%);
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.14);
+      font-weight: 700;
     }
 
     .tab-inactive {
-      color: #94A3B8;
-      border-bottom: 2.5px solid transparent;
+      color: #64748b;
+      border: 1px solid transparent;
+      background: transparent;
     }
 
     .chip {
-      padding: 7px 14px;
-      border-radius: 20px;
+      padding: 8px 16px;
+      border-radius: 999px;
       font-size: 13px;
       font-weight: 500;
       white-space: nowrap;
       cursor: pointer;
       transition: all 0.2s ease;
       border: 1.5px solid var(--gd-border);
-      background: white;
+      background: rgba(255, 255, 255, 0.88);
       color: var(--gd-muted);
     }
 
     .chip.active {
-      background: var(--gd-brand);
+      background: linear-gradient(140deg, #2563eb, #1d4ed8);
       color: white;
-      border-color: var(--gd-brand);
-      box-shadow: 0 8px 16px rgba(24, 95, 165, 0.18);
+      border-color: #1d4ed8;
+      box-shadow: 0 10px 20px rgba(37, 99, 235, 0.25);
     }
 
     .chip:hover {
@@ -187,7 +191,7 @@
       font-family: 'Noto Sans Thai', 'Inter', sans-serif;
       border-radius: var(--gd-radius-control);
       border-color: var(--gd-border);
-      transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
     }
 
     input:focus,
@@ -195,12 +199,12 @@
     textarea:focus {
       outline: none;
       border-color: #93c5fd !important;
-      box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.12);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
       background: #fff;
     }
 
     button {
-      transition: all 0.18s ease;
+      transition: all 0.2s ease;
       font-family: 'Noto Sans Thai', 'Inter', sans-serif;
     }
 
@@ -261,26 +265,31 @@
 
 
     .gd-shell {
-      background: linear-gradient(180deg, #F8FBFF 0%, #F3F7FC 42%, #EEF3FA 100%);
+      background:
+        radial-gradient(circle at 0% 0%, rgba(191, 219, 254, 0.32), transparent 34%),
+        radial-gradient(circle at 100% 0%, rgba(147, 197, 253, 0.26), transparent 35%),
+        linear-gradient(180deg, #f7faff 0%, #f2f6fc 48%, #eef3fa 100%);
     }
 
     .gd-header {
-      background: rgba(255, 255, 255, 0.92);
-      border-bottom: 1px solid rgba(148, 163, 184, 0.18);
-      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.9);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+      backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(10px);
     }
 
     .gd-card {
       background: var(--gd-card);
-      border: 1px solid rgba(148, 163, 184, 0.2);
+      border: 1px solid rgba(148, 163, 184, 0.24);
       border-radius: var(--gd-radius-card);
       box-shadow: var(--gd-shadow-sm);
-      transition: box-shadow 0.18s ease, transform 0.18s ease;
+      transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
     }
 
     .gd-card:hover {
-      box-shadow: var(--gd-shadow-md);
+      box-shadow: var(--gd-shadow-hover);
+      border-color: rgba(148, 163, 184, 0.34);
+      transform: translateY(-2px);
     }
 
     .gd-card-soft {
@@ -291,30 +300,48 @@
 
     .gd-input {
       width: 100%;
-      padding: 10px 12px;
+      height: 44px;
+      padding: 0 14px;
       border: 1px solid var(--gd-border);
-      border-radius: 12px;
-      background: #F8FAFC;
+      border-radius: 10px;
+      background: #f8fafc;
       font-size: 14px;
       color: #0F172A;
     }
 
     .gd-btn-primary {
-      background: linear-gradient(135deg, #1D68AF, #185FA5);
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
       color: #fff;
       border-radius: 12px;
       font-size: 14px;
       font-weight: 600;
-      box-shadow: 0 10px 24px rgba(24, 95, 165, 0.25);
+      min-height: 44px;
+      box-shadow: 0 12px 28px rgba(37, 99, 235, 0.3);
+    }
+
+    .gd-btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 32px rgba(37, 99, 235, 0.34);
     }
 
     .gd-btn-secondary {
       border: 1px solid #CBD5E1;
-      background: #FFFFFF;
+      background: #fff;
       color: #475569;
       border-radius: 12px;
       font-size: 14px;
       font-weight: 600;
+      min-height: 44px;
+    }
+
+    .gd-btn-danger {
+      border: 1px solid #fecaca;
+      background: #fef2f2;
+      color: #dc2626;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      min-height: 44px;
     }
 
     .gd-section-title {
@@ -416,20 +443,38 @@
       box-shadow: 0 10px 20px rgba(202, 138, 4, 0.3);
     }
 
+    #mainTabBar {
+      gap: 8px;
+      border: 0;
+      border-radius: 16px;
+      padding: 6px;
+      background: #eff4fb;
+    }
+
     #mainTabBar .main-tab {
       letter-spacing: 0.01em;
+      border-radius: 12px;
+      transition: all 0.2s ease;
     }
 
     #mainTabBar .main-tab:hover {
-      color: var(--gd-brand);
-      background: rgba(232, 240, 250, 0.65);
+      color: #1e3a8a;
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    .gd-modal-panel {
+      background: linear-gradient(160deg, #ffffff 0%, #f9fbff 100%);
+      border-radius: 24px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.2);
+      padding: 24px;
     }
   </style>
 </head>
 
 <body class="h-full gd-shell">
   <div id="app-root" class="h-full w-full flex justify-center overflow-auto">
-    <div class="w-full" style="max-width:480px;height:100%;position:relative;">
+    <div class="w-full xl:px-8" style="max-width:1180px;height:100%;position:relative;">
 
       <!-- LOADING -->
       <div id="screen-loading" class="screen active">
@@ -554,29 +599,29 @@
 
       <!-- MAIN -->
       <div id="screen-main" class="screen">
-        <div class="gd-header px-4 pt-4 pb-0" style="position:sticky;top:0;z-index:20;">
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
+        <div class="gd-header px-4 lg:px-8 pt-6 pb-4" style="position:sticky;top:0;z-index:20;">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
               <div id="main-avatar"
-                class="w-8 h-8 rounded-full bg-blue-100 text-brand flex items-center justify-center font-bold text-xs">
+                class="w-10 h-10 rounded-full bg-blue-100 text-brand flex items-center justify-center font-bold text-sm">
               </div>
               <div>
                 <p id="main-user-name" class="font-semibold text-gray-900 text-sm leading-tight"></p>
                 <p id="main-user-role" class="text-xs text-gray-400">GA Staff</p>
               </div>
             </div>
-            <button id="logoutBtn" onclick="confirmLogout()" class="p-2 rounded-full hover:bg-gray-100 transition">
+            <button id="logoutBtn" onclick="confirmLogout()" class="p-2.5 rounded-xl hover:bg-slate-100 transition">
               <i data-lucide="log-out" class="w-4 h-4 text-gray-400"></i>
             </button>
           </div>
           <div class="flex border-b border-gray-100" id="mainTabBar"></div>
         </div>
         <!-- GA Tabs -->
-        <div id="tab-send" class="flex-1 overflow-auto px-4 pt-4 pb-6 hidden"></div>
+        <div id="tab-send" class="flex-1 overflow-auto px-4 lg:px-8 pt-6 pb-8 hidden"></div>
         <div id="tab-receive" class="flex-1 overflow-auto hidden"></div>
         <div id="tab-history" class="flex-1 overflow-auto hidden"></div>
         <!-- MGR Tab -->
-        <div id="tab-mgrdash" class="flex-1 overflow-auto px-4 pt-4 pb-6 hidden"></div>
+        <div id="tab-mgrdash" class="flex-1 overflow-auto px-4 lg:px-8 pt-6 pb-8 hidden"></div>
       </div>
 
       <!-- RECEIVE DETAIL -->
@@ -631,7 +676,7 @@
     class="fixed inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200 px-6"
     style="z-index:300;">
     <div class="absolute inset-0 bg-black/40" onclick="closeUserModal()"></div>
-    <div class="relative w-full bg-white rounded-2xl p-6" style="max-width:360px;">
+    <div class="relative w-full gd-modal-panel" style="max-width:360px;">
       <h3 class="font-bold text-gray-900 text-lg mb-4">เพิ่มสมาชิกใหม่</h3>
       <div class="space-y-4">
         <div>
@@ -673,7 +718,7 @@
     class="fixed inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200 px-6"
     style="z-index:300;">
     <div class="absolute inset-0 bg-black/40" onclick="closeDeletePlanModal()"></div>
-    <div class="relative w-full bg-white rounded-2xl p-6" style="max-width:320px;">
+    <div class="relative w-full gd-modal-panel" style="max-width:320px;">
       <div class="flex flex-col items-center text-center mb-5">
         <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-3">
           <i data-lucide="trash-2" class="w-6 h-6 text-red-500"></i>
@@ -686,7 +731,7 @@
         <button onclick="closeDeletePlanModal()"
           class="flex-1 py-2.5 gd-btn-secondary transition">ยกเลิก</button>
         <button onclick="executeDeletePlan()"
-          class="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition" id="deletePlanBtn">ลบเลย</button>
+          class="flex-1 py-2.5 gd-btn-danger transition" id="deletePlanBtn">ลบเลย</button>
       </div>
     </div>
   </div>
@@ -696,7 +741,7 @@
     class="fixed inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200 px-6"
     style="z-index:300;">
     <div class="absolute inset-0 bg-black/40" onclick="closeDeleteUserModal()"></div>
-    <div class="relative w-full bg-white rounded-2xl p-6" style="max-width:320px;">
+    <div class="relative w-full gd-modal-panel" style="max-width:320px;">
       <div class="flex flex-col items-center text-center mb-5">
         <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-3">
           <i data-lucide="user-x" class="w-6 h-6 text-red-500"></i>
@@ -709,7 +754,7 @@
         <button onclick="closeDeleteUserModal()"
           class="flex-1 py-2.5 gd-btn-secondary transition">ยกเลิก</button>
         <button id="deleteUserConfirmBtn" onclick="executeDeleteUser()"
-          class="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition">ลบเลย</button>
+          class="flex-1 py-2.5 gd-btn-danger transition">ลบเลย</button>
       </div>
     </div>
   </div>
@@ -719,7 +764,7 @@
     class="fixed inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200 px-6"
     style="z-index:300;">
     <div class="absolute inset-0 bg-black/40" onclick="closeEditEmailModal()"></div>
-    <div class="relative w-full bg-white rounded-2xl p-6" style="max-width:320px;">
+    <div class="relative w-full gd-modal-panel" style="max-width:320px;">
       <div class="flex flex-col items-center text-center mb-4">
         <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
           <i data-lucide="mail" class="w-6 h-6 text-brand"></i>
@@ -735,7 +780,7 @@
         <button onclick="closeEditEmailModal()"
           class="flex-1 py-2.5 gd-btn-secondary transition">ยกเลิก</button>
         <button id="editEmailSaveBtn" onclick="confirmEditEmail()"
-          class="flex-1 py-2.5 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-blue-800 transition">บันทึก</button>
+          class="flex-1 py-2.5 gd-btn-primary transition">บันทึก</button>
       </div>
     </div>
   </div>
@@ -745,7 +790,7 @@
     class="fixed inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200 px-6"
     style="z-index:300;">
     <div class="absolute inset-0 bg-black/40" onclick="closeResetPinModal()"></div>
-    <div class="relative w-full bg-white rounded-2xl p-6" style="max-width:320px;">
+    <div class="relative w-full gd-modal-panel" style="max-width:320px;">
       <div class="flex flex-col items-center text-center mb-5">
         <div class="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center mb-3">
           <i data-lucide="key-round" class="w-6 h-6 text-amber-500"></i>
@@ -764,7 +809,7 @@
         <button onclick="closeResetPinModal()"
           class="flex-1 py-2.5 gd-btn-secondary transition">ยกเลิก</button>
         <button id="resetPinConfirmBtn" onclick="executeResetPin()"
-          class="flex-1 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition">ยืนยัน Reset</button>
+          class="flex-1 py-2.5 gd-btn-primary transition">ยืนยัน Reset</button>
       </div>
     </div>
   </div>
@@ -774,7 +819,7 @@
     class="fixed inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200 px-6"
     style="z-index:300;">
     <div class="absolute inset-0 bg-black/40" onclick="closeLogoutModal()"></div>
-    <div class="relative w-full bg-white rounded-2xl p-6" style="max-width:320px;">
+    <div class="relative w-full gd-modal-panel" style="max-width:320px;">
       <div class="flex flex-col items-center text-center mb-5">
         <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-3">
           <i data-lucide="log-out" class="w-6 h-6 text-red-500"></i>
@@ -786,7 +831,7 @@
         <button onclick="closeLogoutModal()"
           class="flex-1 py-2.5 gd-btn-secondary transition">ยกเลิก</button>
         <button onclick="logout()"
-          class="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition">ออกจากระบบ</button>
+          class="flex-1 py-2.5 gd-btn-danger transition">ออกจากระบบ</button>
       </div>
     </div>
   </div>
@@ -796,7 +841,7 @@
     class="fixed inset-0 flex items-end justify-center pointer-events-none opacity-0 transition-opacity duration-200"
     style="z-index:300;">
     <div class="absolute inset-0 bg-black/40" onclick="closeLeaveModal()"></div>
-    <div class="relative w-full bg-white rounded-t-2xl p-6" style="max-width:480px;padding-bottom:max(24px,env(safe-area-inset-bottom));">
+    <div class="relative w-full gd-modal-panel" style="max-width:480px;padding-bottom:max(24px,env(safe-area-inset-bottom));">
       <div class="flex items-center gap-2 mb-4">
         <i data-lucide="map-pin" class="w-5 h-5 text-warn"></i>
         <h3 class="font-bold text-gray-900 text-base">ฝากเอกสาร</h3>
@@ -817,7 +862,7 @@
         <button onclick="closeLeaveModal()"
           class="flex-1 py-2.5 gd-btn-secondary transition">ยกเลิก</button>
         <button onclick="submitLeave()" id="leaveSubmitBtn"
-          class="flex-1 py-2.5 rounded-xl bg-warn text-white text-sm font-semibold hover:bg-amber-600 transition shadow-sm">ยืนยันฝาก</button>
+          class="flex-1 py-2.5 gd-btn-primary transition">ยืนยันฝาก</button>
       </div>
     </div>
   </div>
@@ -827,7 +872,7 @@
     class="fixed inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200 px-6"
     style="z-index:310;">
     <div class="absolute inset-0 bg-black/60"></div>
-    <div class="relative w-full bg-white rounded-2xl p-6 text-center" style="max-width:320px;">
+    <div class="relative w-full gd-modal-panel text-center" style="max-width:320px;">
       <div class="w-14 h-14 rounded-full bg-warn-light flex items-center justify-center mx-auto mb-3">
         <i data-lucide="key" class="w-7 h-7 text-warn"></i>
       </div>
@@ -838,7 +883,7 @@
       </div>
       <p class="text-xs text-gray-400 mb-4" id="leaveTokenExpiry"></p>
       <button onclick="copyLeaveToken()" id="copyTokenBtn"
-        class="w-full py-2.5 rounded-xl border-2 border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition mb-3 flex items-center justify-center gap-2">
+        class="w-full py-2.5 gd-btn-secondary transition mb-3 flex items-center justify-center gap-2">
         <i data-lucide="copy" class="w-4 h-4"></i> คัดลอก Token
       </button>
       <button onclick="closeLeaveTokenModal()"
@@ -851,7 +896,7 @@
     class="fixed inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200 px-6"
     style="z-index:300;">
     <div class="absolute inset-0 bg-black/40" onclick="closeCancelPlanModal()"></div>
-    <div class="relative w-full bg-white rounded-2xl p-6" style="max-width:320px;">
+    <div class="relative w-full gd-modal-panel" style="max-width:320px;">
       <div class="flex flex-col items-center text-center mb-5">
         <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-3">
           <i data-lucide="x-circle" class="w-6 h-6 text-red-500"></i>
@@ -864,7 +909,7 @@
         <button onclick="closeCancelPlanModal()"
           class="flex-1 py-2.5 gd-btn-secondary transition">ไม่ยกเลิก</button>
         <button onclick="executeCancelPlan()"
-          class="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition" id="cancelPlanBtn">ยืนยันยกเลิก</button>
+          class="flex-1 py-2.5 gd-btn-danger transition" id="cancelPlanBtn">ยืนยันยกเลิก</button>
       </div>
     </div>
   </div>
@@ -1454,13 +1499,13 @@
 
       const bar = document.getElementById('mainTabBar');
       if (isMgr) {
-        bar.innerHTML = `<button class="main-tab flex-1 py-2.5 text-center text-sm font-medium tab-active" onclick="switchTab(0)">Dashboard</button>
-      <button class="main-tab flex-1 py-2.5 text-center text-sm font-medium tab-inactive" onclick="switchTab(1)">ประวัติ</button>`;
+        bar.innerHTML = `<button class="main-tab flex-1 px-3 py-2.5 text-center text-sm font-semibold tab-active" onclick="switchTab(0)">Dashboard</button>
+      <button class="main-tab flex-1 px-3 py-2.5 text-center text-sm font-semibold tab-inactive" onclick="switchTab(1)">ประวัติ</button>`;
         switchTab(0);
       } else {
-        bar.innerHTML = `<button class="main-tab flex-1 py-2.5 text-center text-sm font-medium tab-active" onclick="switchTab(0)">ส่งเอกสาร</button>
-      <button class="main-tab flex-1 py-2.5 text-center text-sm font-medium tab-inactive" onclick="switchTab(1)">รับเอกสาร</button>
-      <button class="main-tab flex-1 py-2.5 text-center text-sm font-medium tab-inactive" onclick="switchTab(2)">ประวัติ</button>`;
+        bar.innerHTML = `<button class="main-tab flex-1 px-3 py-2.5 text-center text-sm font-semibold tab-active" onclick="switchTab(0)">ส่งเอกสาร</button>
+      <button class="main-tab flex-1 px-3 py-2.5 text-center text-sm font-semibold tab-inactive" onclick="switchTab(1)">รับเอกสาร</button>
+      <button class="main-tab flex-1 px-3 py-2.5 text-center text-sm font-semibold tab-inactive" onclick="switchTab(2)">ประวัติ</button>`;
         switchTab(0);
       }
     }
@@ -1468,7 +1513,7 @@
     function switchTab(idx) {
       const isMgr = CU.role === 'mgr';
       document.querySelectorAll('.main-tab').forEach((b, i) => {
-        b.className = `main-tab flex-1 py-2.5 text-center text-sm font-medium ${i === idx ? 'tab-active' : 'tab-inactive'}`;
+        b.className = `main-tab flex-1 px-3 py-2.5 text-center text-sm font-semibold ${i === idx ? 'tab-active' : 'tab-inactive'}`;
       });
       ['send', 'receive', 'history', 'mgrdash'].forEach(t => { const el = document.getElementById('tab-' + t); if (el) el.style.display = 'none'; });
 
@@ -1487,15 +1532,20 @@
     function renderSend() {
       docCount = 1;
       document.getElementById('tab-send').innerHTML = `
-    <div class="gd-card p-4 mb-4 fade-in">
-      <h3 class="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4 text-brand"></i> ข้อมูลแผน</h3>
-      <div class="space-y-3">
-        <div><label class="text-xs font-medium text-gray-500 mb-1 block">ชื่อแผน / รายละเอียด</label>
+    <section class="mb-6 fade-in">
+      <p class="gd-section-title mb-2">Create handover</p>
+      <h2 class="text-xl font-bold tracking-tight text-slate-900 mb-1">ส่งเอกสารใหม่</h2>
+      <p class="text-sm text-slate-500">จัดกลุ่มเอกสารและระบุผู้รับปลายทางให้ชัดเจน</p>
+    </section>
+    <div class="gd-card p-6 mb-6 fade-in">
+      <h3 class="font-semibold text-gray-900 text-base mb-4 flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4 text-brand"></i> ข้อมูลแผน</h3>
+      <div class="space-y-4">
+        <div><label class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 block">ชื่อแผน / รายละเอียด</label>
           <input type="text" id="pName" placeholder="เช่น ใบแจ้งหนี้เดือนมิถุนายน" class="gd-input"></div>
-        <div class="grid grid-cols-2 gap-3">
-          <div><label class="text-xs font-medium text-gray-500 mb-1 block">วันที่ส่ง</label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div><label class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 block">วันที่ส่ง</label>
             <input type="date" id="pDate" value="${new Date().toISOString().slice(0, 10)}" class="gd-input"></div>
-          <div><label class="text-xs font-medium text-gray-500 mb-1 block">แผนกปลายทาง</label>
+          <div><label class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 block">แผนกปลายทาง</label>
             <div class="relative">
               <select id="pDept" class="gd-input appearance-none pr-8">
                 <option value="">เลือกแผนก</option><option>ฝ่ายบัญชี</option><option>ฝ่ายการเงิน</option><option>ฝ่ายจัดซื้อ</option><option>ฝ่ายบุคคล</option><option>ฝ่ายกฎหมาย</option>
@@ -1509,15 +1559,15 @@
         <div id="deptOtherWrap" style="display:none"><input type="text" id="pDeptOther" placeholder="ระบุแผนก" class="gd-input"></div>
       </div>
     </div>
-    <div class="mb-3 flex items-center justify-between px-1">
-      <h3 class="font-semibold text-gray-900 text-sm flex items-center gap-2"><i data-lucide="layers" class="w-4 h-4 text-brand"></i> รายการเอกสาร</h3>
+    <div class="mb-4 flex items-center justify-between px-1">
+      <h3 class="font-semibold text-gray-900 text-base flex items-center gap-2"><i data-lucide="layers" class="w-4 h-4 text-brand"></i> รายการเอกสาร</h3>
       <span id="docCountBadge" class="text-xs bg-brand-light text-brand px-2 py-0.5 rounded-full font-medium">1 รายการ</span>
     </div>
     <div id="docItems"></div>
-    <button onclick="addDocItem()" class="w-full py-2.5 border-2 border-dashed border-gray-200 rounded-xl text-sm font-medium text-gray-400 hover:border-brand hover:text-brand transition flex items-center justify-center gap-2 mb-4">
+    <button onclick="addDocItem()" class="w-full min-h-[52px] border-2 border-dashed border-slate-300 rounded-2xl text-sm font-semibold text-slate-500 hover:border-brand hover:text-brand hover:bg-white/70 transition flex items-center justify-center gap-2 mb-6">
       <i data-lucide="plus-circle" class="w-4 h-4"></i> เพิ่มเอกสาร
     </button>
-    <button onclick="submitPlan()" class="w-full py-3 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-blue-800 transition flex items-center justify-center gap-2 card-shadow-md" id="submitBtn">
+    <button onclick="submitPlan()" class="w-full py-3 gd-btn-primary text-sm font-semibold transition flex items-center justify-center gap-2" id="submitBtn">
       <i data-lucide="send" class="w-4 h-4"></i> ส่งเอกสาร
     </button>`;
       document.getElementById('pDept').addEventListener('change', function () {
@@ -1529,19 +1579,19 @@
     function addDocItem() {
       const c = document.getElementById('docItems'); if (!c) return;
       const idx = c.children.length + 1;
-      const d = document.createElement('div'); d.className = 'doc-item bg-white rounded-xl card-shadow p-4 mb-3 fade-in';
-      d.innerHTML = `<div class="flex items-center justify-between mb-3">
+      const d = document.createElement('div'); d.className = 'doc-item gd-card p-5 mb-4 fade-in';
+      d.innerHTML = `<div class="flex items-center justify-between mb-4">
     <span class="text-xs font-bold text-brand bg-brand-light px-2 py-0.5 rounded-md">#${idx}</span>
     <button onclick="this.closest('.doc-item').remove();updateDocBadge()" class="p-1 rounded-full hover:bg-red-50 transition"><i data-lucide="x" class="w-4 h-4 text-gray-300 hover:text-red-400"></i></button>
   </div>
-  <div class="space-y-2.5">
-    <div class="grid grid-cols-2 gap-2.5">
-      <input type="text" placeholder="เลขที่เอกสาร" class="fn w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand bg-gray-50/50" oninput="checkDupDocNo(this)">
-      <input type="text" placeholder="ผู้ขาย/Vendor" class="fv w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand bg-gray-50/50">
+  <div class="space-y-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <input type="text" placeholder="เลขที่เอกสาร" class="fn gd-input" oninput="checkDupDocNo(this)">
+      <input type="text" placeholder="ผู้ขาย/Vendor" class="fv gd-input">
     </div>
-    <input type="text" placeholder="รายละเอียดเอกสาร" class="fd w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand bg-gray-50/50">
-    <div class="flex items-center gap-2">
-      <input type="number" placeholder="จำนวนเงิน" class="fa flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand bg-gray-50/50">
+    <input type="text" placeholder="รายละเอียดเอกสาร" class="fd gd-input">
+    <div class="flex items-center gap-3">
+      <input type="number" placeholder="จำนวนเงิน" class="fa gd-input flex-1">
       <span class="text-xs text-gray-400 font-medium">บาท</span>
     </div>
   </div>`;
@@ -1643,11 +1693,16 @@
       const el = document.getElementById('tab-receive');
       el.innerHTML = `
     <div class="ptr-indicator" id="ptrIndicator"><svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> รีเฟรช...</div>
-    <div class="px-4 pt-3 pb-2 overflow-x-auto flex gap-2" style="scrollbar-width:none;">
+    <div class="px-4 lg:px-8 pt-6 pb-2">
+      <p class="gd-section-title mb-2">Inbox</p>
+      <h2 class="text-xl font-bold tracking-tight text-slate-900">รับเอกสาร</h2>
+      <p class="text-sm text-slate-500 mt-1">ตรวจสอบรายการเอกสารที่รอรับจากทุกแผนก</p>
+    </div>
+    <div class="px-4 lg:px-8 pt-4 pb-3 overflow-x-auto flex gap-2" style="scrollbar-width:none;">
       <div class="chip ${RF === '' ? 'active' : ''}" onclick="setRF(this,'')">📋 ทั้งหมด <span class="badge-count inline-flex items-center justify-center ${RF === '' ? 'bg-white/30 text-white' : 'bg-brand text-white'} rounded-full ml-1">${pending.length}</span></div>
       ${Object.keys(dc).map(d => `<div class="chip ${RF === d ? 'active' : ''}" data-dept="${he(d)}" onclick="setRF(this, this.dataset.dept)">${dicon(d)} ${he(d.replace('ฝ่าย', ''))} <span class="badge-count inline-flex items-center justify-center bg-brand text-white rounded-full ml-1">${dc[d]}</span></div>`).join('')}
     </div>
-    <div class="px-4 pt-1 pb-6 space-y-3" id="rList"></div>`;
+    <div class="px-4 lg:px-8 pt-1 pb-8 space-y-4" id="rList"></div>`;
       renderRList();
       initPTR(el);
     }
@@ -1702,10 +1757,10 @@
       el.innerHTML = list.map(p => {
         const tot = p.docs.reduce((a, d) => a + (d.amount || 0), 0);
         const prog = p.checked.length ? Math.round(p.checked.filter(Boolean).length / p.checked.length * 100) : 0;
-        return `<div class="gd-card p-4 cursor-pointer hover:shadow-md transition fade-in" data-id="${he(p.id)}" onclick="openReceiveDetail(this.dataset.id)">
-      <div class="flex items-start justify-between mb-2">
-        <div><p class="font-semibold text-gray-900 text-sm">${he(p.name)}</p>
-        <p class="text-xs text-gray-400 mt-0.5">${dicon(p.dept)} ${he(p.dept)} • ส่งโดย ${he(p.createdBy.split(' ')[0])}</p></div>
+        return `<div class="gd-card p-5 cursor-pointer transition fade-in" data-id="${he(p.id)}" onclick="openReceiveDetail(this.dataset.id)">
+      <div class="flex items-start justify-between mb-3">
+        <div><p class="font-semibold text-gray-900 text-base">${he(p.name)}</p>
+        <p class="text-xs text-gray-400 mt-1">${dicon(p.dept)} ${he(p.dept)} • ส่งโดย ${he(p.createdBy.split(' ')[0])}</p></div>
         <span class="text-xs px-2.5 py-1 rounded-full font-medium ${statusStyle(p.status)}">${statusTh(p.status)}</span>
       </div>
       <div class="flex items-center justify-between">
@@ -1739,10 +1794,10 @@
       document.getElementById('rdModal-badge').className = `text-xs px-2.5 py-1 rounded-full font-medium ${statusStyle(p.status)}`;
       document.getElementById('rdModal-badge').textContent = statusTh(p.status);
       document.getElementById('rdModal-body').innerHTML = `
-    <div class="gd-card p-4 mb-4">
-      <h4 class="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2"><i data-lucide="clipboard-check" class="w-4 h-4 text-brand"></i> รายการเอกสาร</h4>
+    <div class="gd-card p-6 mb-5">
+      <h4 class="font-semibold text-gray-900 text-base mb-4 flex items-center gap-2"><i data-lucide="clipboard-check" class="w-4 h-4 text-brand"></i> รายการเอกสาร</h4>
       <div class="space-y-2" id="rdChecklist">
-        ${p.docs.map((d, i) => `<label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition">
+        ${p.docs.map((d, i) => `<label class="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl cursor-pointer hover:bg-slate-100 transition">
           <input type="checkbox" ${p.checked[i] ? 'checked' : ''} onchange="togDoc(${i},this.checked)" class="w-4 h-4 rounded border-gray-300 accent-[#185FA5]">
           <div class="flex-1 min-w-0"><p class="text-sm font-medium text-gray-800">${he(d.no)}</p>
           <p class="text-xs text-gray-400">${[d.vendor, d.desc].filter(Boolean).map(he).join(' • ')}</p></div>
@@ -1751,13 +1806,13 @@
       </div>
       ${tot ? `<div class="mt-3 pt-3 border-t border-gray-100 flex justify-between"><span class="text-xs text-gray-500 font-medium">มูลค่ารวม</span><span class="text-sm font-bold text-gray-900">฿${fa(tot)}</span></div>` : ''}
     </div>
-    <div class="gd-card p-4 mb-4">
-      <h4 class="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2"><i data-lucide="pen-tool" class="w-4 h-4 text-brand"></i> ลงนามผู้รับ</h4>
-      <label class="text-xs font-medium text-gray-500 mb-1.5 block">ชื่อผู้รับเอกสาร</label>
-      <input type="text" id="signerName" placeholder="พิมพ์ชื่อผู้รับ" value="${he(p.signer)}" class="gd-input mb-3">
+    <div class="gd-card p-6 mb-5">
+      <h4 class="font-semibold text-gray-900 text-base mb-4 flex items-center gap-2"><i data-lucide="pen-tool" class="w-4 h-4 text-brand"></i> ลงนามผู้รับ</h4>
+      <label class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 block">ชื่อผู้รับเอกสาร</label>
+      <input type="text" id="signerName" placeholder="พิมพ์ชื่อผู้รับ" value="${he(p.signer)}" class="gd-input mb-4">
       ${SIGDATA[p.id] ? `<label class="text-xs font-medium text-gray-500 mb-1 block">ลายเซ็นครั้งก่อน (${he(p.signer)})</label><div class="border border-gray-100 rounded-lg overflow-hidden bg-gray-50 mb-3"><img src="${SIGDATA[p.id]}" style="width:100%;height:60px;object-fit:contain;"></div>` : ''}
-      <label class="text-xs font-medium text-gray-500 mb-1.5 block">ลายเซ็นใหม่</label>
-      <div class="relative border border-gray-200 rounded-lg overflow-hidden bg-gray-50/50">
+      <label class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 block">ลายเซ็นใหม่</label>
+      <div class="relative border border-gray-200 rounded-2xl overflow-hidden bg-gray-50/60">
         <canvas id="signatureCanvas" width="400" height="160" class="w-full" style="height:140px;"></canvas>
         <button onclick="clearSign()" class="absolute top-2 right-2 px-2.5 py-1 bg-white rounded-md text-xs text-gray-400 hover:text-gray-600 card-shadow transition">ล้าง</button>
       </div>
@@ -1765,7 +1820,7 @@
     <button onclick="submitReceive()" class="w-full py-3 bg-success text-white rounded-xl text-sm font-semibold hover:bg-emerald-800 transition flex items-center justify-center gap-2 card-shadow-md" id="rdConfirmBtn">
       <i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร
     </button>
-    <button onclick="openLeaveModal()" class="w-full py-2.5 mt-2 border-2 border-dashed border-amber-200 text-amber-600 rounded-xl text-sm font-medium hover:bg-amber-50 transition flex items-center justify-center gap-2">
+    <button onclick="openLeaveModal()" class="w-full py-2.5 mt-3 gd-btn-secondary border-dashed border-amber-200 text-amber-700 hover:bg-amber-50 transition flex items-center justify-center gap-2">
       <i data-lucide="map-pin" class="w-4 h-4"></i> ไม่มีคนรับ — ฝากเอกสาร
     </button>`;
       goScreen('receive-detail'); lucide.createIcons(); initSign();
@@ -1854,24 +1909,26 @@
     function renderHistory() {
       const isMgr = CU.role === 'mgr';
       const tabBtns = isMgr
-        ? `<button class="hist-tab flex-1 py-2 text-xs font-semibold rounded-md bg-white text-gray-900 card-shadow transition" onclick="switchHistTab(0)">Dashboard</button>
-       <button class="hist-tab flex-1 py-2 text-xs font-semibold rounded-md text-gray-400 transition" onclick="switchHistTab(1)">รายการ</button>
-       <button class="hist-tab flex-1 py-2 text-xs font-semibold rounded-md text-gray-400 transition" onclick="switchHistTab(2)">จัดการสมาชิก</button>`
-        : `<button class="hist-tab flex-1 py-2 text-xs font-semibold rounded-md bg-white text-gray-900 card-shadow transition" onclick="switchHistTab(0)">Dashboard</button>
-       <button class="hist-tab flex-1 py-2 text-xs font-semibold rounded-md text-gray-400 transition" onclick="switchHistTab(1)">รายการ</button>
-       <button class="hist-tab flex-1 py-2 text-xs font-semibold rounded-md text-gray-400 transition" onclick="switchHistTab(2)">รหัสของฉัน</button>`;
+        ? `<button class="hist-tab flex-1 py-2.5 px-3 text-xs font-semibold rounded-xl bg-white text-gray-900 card-shadow transition" onclick="switchHistTab(0)">Dashboard</button>
+       <button class="hist-tab flex-1 py-2.5 px-3 text-xs font-semibold rounded-xl text-gray-500 transition" onclick="switchHistTab(1)">รายการ</button>
+       <button class="hist-tab flex-1 py-2.5 px-3 text-xs font-semibold rounded-xl text-gray-500 transition" onclick="switchHistTab(2)">จัดการสมาชิก</button>`
+        : `<button class="hist-tab flex-1 py-2.5 px-3 text-xs font-semibold rounded-xl bg-white text-gray-900 card-shadow transition" onclick="switchHistTab(0)">Dashboard</button>
+       <button class="hist-tab flex-1 py-2.5 px-3 text-xs font-semibold rounded-xl text-gray-500 transition" onclick="switchHistTab(1)">รายการ</button>
+       <button class="hist-tab flex-1 py-2.5 px-3 text-xs font-semibold rounded-xl text-gray-500 transition" onclick="switchHistTab(2)">รหัสของฉัน</button>`;
       document.getElementById('tab-history').innerHTML = `
-    <div class="px-4 pt-3 pb-1">
-      <div class="flex bg-gray-100 rounded-lg p-0.5 mb-4">${tabBtns}</div>
+    <div class="px-4 lg:px-8 pt-6 pb-2">
+      <p class="gd-section-title mb-2">Insights</p>
+      <h2 class="text-xl font-bold tracking-tight text-slate-900 mb-4">ประวัติและสถิติ</h2>
+      <div class="flex bg-slate-100 rounded-2xl p-1 mb-4">${tabBtns}</div>
     </div>
-    <div id="hist-body" class="px-4 pb-6"></div>`;
+    <div id="hist-body" class="px-4 lg:px-8 pb-8"></div>`;
       switchHistTab(0);
     }
 
     function switchHistTab(idx) {
       const isMgr = CU.role === 'mgr';
       document.querySelectorAll('.hist-tab').forEach((b, i) => {
-        b.className = i === idx ? 'hist-tab flex-1 py-2 text-xs font-semibold rounded-md bg-white text-gray-900 card-shadow transition' : 'hist-tab flex-1 py-2 text-xs font-semibold rounded-md text-gray-400 transition';
+        b.className = i === idx ? 'hist-tab flex-1 py-2.5 px-3 text-xs font-semibold rounded-xl bg-white text-gray-900 card-shadow transition' : 'hist-tab flex-1 py-2.5 px-3 text-xs font-semibold rounded-xl text-gray-500 transition';
       });
       HT = (isMgr ? ['dash', 'list', 'users'] : ['dash', 'list', 'pin'])[idx];
       if (HT === 'dash') renderHistDash();
@@ -1922,9 +1979,9 @@
           </div>
         </div>
         <div class="space-y-2.5 flex-1">
-          <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-success flex-shrink-0"></div><span class="text-xs text-gray-600 flex-1">ครบแล้ว</span><span class="text-xs font-semibold text-gray-900">${done}</span></div>
-          <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-warn flex-shrink-0"></div><span class="text-xs text-gray-600 flex-1">รับบางส่วน</span><span class="text-xs font-semibold text-gray-900">${partial}</span></div>
-          <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-brand flex-shrink-0"></div><span class="text-xs text-gray-600 flex-1">รอรับ</span><span class="text-xs font-semibold text-gray-900">${pend}</span></div>
+          <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-success flex-shrink-0"></div><span class="text-xs text-gray-600 flex-1">ครบแล้ว</span><span class="text-xs font-semibold text-gray-900">${done}</span></div>
+          <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-warn flex-shrink-0"></div><span class="text-xs text-gray-600 flex-1">รับบางส่วน</span><span class="text-xs font-semibold text-gray-900">${partial}</span></div>
+          <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-brand flex-shrink-0"></div><span class="text-xs text-gray-600 flex-1">รอรับ</span><span class="text-xs font-semibold text-gray-900">${pend}</span></div>
         </div>
       </div>
     </div>
@@ -2153,9 +2210,9 @@
           <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"><p class="text-lg font-bold text-gray-900">${pct}%</p><p class="text-[10px] text-gray-400">เสร็จสิ้น</p></div>
         </div>
         <div class="space-y-2.5 flex-1">
-          <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-success"></div><span class="text-xs text-gray-600 flex-1">ครบแล้ว</span><span class="text-xs font-semibold">${done}</span></div>
-          <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-warn"></div><span class="text-xs text-gray-600 flex-1">รับบางส่วน</span><span class="text-xs font-semibold">${partial}</span></div>
-          <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-brand"></div><span class="text-xs text-gray-600 flex-1">รอรับ</span><span class="text-xs font-semibold">${pend}</span></div>
+          <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-success"></div><span class="text-xs text-gray-600 flex-1">ครบแล้ว</span><span class="text-xs font-semibold">${done}</span></div>
+          <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-warn"></div><span class="text-xs text-gray-600 flex-1">รับบางส่วน</span><span class="text-xs font-semibold">${partial}</span></div>
+          <div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-brand"></div><span class="text-xs text-gray-600 flex-1">รอรับ</span><span class="text-xs font-semibold">${pend}</span></div>
         </div>
       </div>
     </div>
