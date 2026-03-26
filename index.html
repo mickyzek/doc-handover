@@ -235,6 +235,25 @@
 
     canvas#signatureCanvas {
       touch-action: none;
+      background: #fff;
+      border-radius: 14px;
+      display: block;
+    }
+
+    .signature-pad {
+      position: relative;
+      border: 1px solid #dbe4f0;
+      border-radius: 16px;
+      overflow: hidden;
+      background: linear-gradient(180deg, #f8fbff 0%, #f1f6ff 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+      padding: 8px;
+    }
+
+    .signature-pad__canvas {
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      border-radius: 12px;
     }
 
     ::-webkit-scrollbar {
@@ -1558,7 +1577,7 @@
     let _plansPrefetch = null;
     let CPB = '', CP_STEP = 1, CP_NEW = '';
     let RF = '', HF = '', GF = '', SQ = '', HT = 'dash';
-    let CP = null, drawing = false, lx = 0, ly = 0, sctx = null, DM = 'select';
+    let CP = null, drawing = false, lx = 0, ly = 0, sctx = null, DM = 'select', hasSignatureStroke = false;
     let DC = null, MC = null, docCount = 1;
 
     // avatar colors
@@ -2209,10 +2228,10 @@
       <h4 class="font-semibold text-gray-900 text-base mb-4 flex items-center gap-2"><i data-lucide="pen-tool" class="w-4 h-4 gd-icon-accent"></i> ลงนามผู้รับ</h4>
       <label class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 block">ชื่อผู้รับเอกสาร</label>
       <input type="text" id="signerName" placeholder="พิมพ์ชื่อผู้รับ" value="${he(p.signer)}" class="gd-input mb-4">
-      ${SIGDATA[p.id] ? `<label class="text-xs font-medium text-gray-500 mb-1 block">ลายเซ็นครั้งก่อน (${he(p.signer)})</label><div class="border border-gray-100 rounded-lg overflow-hidden bg-gray-50 mb-3"><img src="${SIGDATA[p.id]}" style="width:100%;height:60px;object-fit:contain;"></div>` : ''}
+      ${SIGDATA[p.id] ? `<label class="text-xs font-medium text-gray-500 mb-1 block">ลายเซ็นครั้งก่อน (${he(p.signer)})</label><div class="signature-pad mb-3"><img src="${SIGDATA[p.id]}" style="width:100%;height:72px;object-fit:contain;background:#fff;border:1px solid #e2e8f0;border-radius:12px;"></div>` : ''}
       <label class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 block">ลายเซ็นใหม่</label>
-      <div class="relative border border-gray-200 rounded-2xl overflow-hidden bg-gray-50/60">
-        <canvas id="signatureCanvas" width="400" height="160" class="w-full" style="height:140px;"></canvas>
+      <div class="signature-pad">
+        <canvas id="signatureCanvas" width="400" height="160" class="w-full signature-pad__canvas" style="height:140px;"></canvas>
         <button onclick="clearSign()" class="absolute top-2 right-2 px-2.5 py-1 bg-white rounded-md text-xs text-gray-400 hover:text-gray-600 card-shadow transition">ล้าง</button>
       </div>
     </div>
@@ -2240,25 +2259,60 @@
 
     function initSign() {
       const c = document.getElementById('signatureCanvas'); if (!c) return;
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const r = c.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) { requestAnimationFrame(initSign); return; }
       c.width = Math.round(r.width * dpr);
       c.height = Math.round(r.height * dpr);
       sctx = c.getContext('2d');
+      if (!sctx) return;
       sctx.scale(dpr, dpr);
-      sctx.strokeStyle = '#1E293B'; sctx.lineWidth = 2; sctx.lineCap = 'round'; sctx.lineJoin = 'round';
+      sctx.imageSmoothingEnabled = true;
+      sctx.fillStyle = '#FFFFFF';
+      sctx.fillRect(0, 0, r.width, r.height);
+      sctx.strokeStyle = '#0F172A';
+      sctx.lineWidth = Math.max(1.8, Math.min(2.4, r.width / 180));
+      sctx.lineCap = 'round';
+      sctx.lineJoin = 'round';
+      hasSignatureStroke = false;
       const pos = e => { const rc = c.getBoundingClientRect(), src = e.touches?.[0] ?? e; return [src.clientX - rc.left, src.clientY - rc.top]; };
-      c.onpointerdown = e => { drawing = true; const [x, y] = pos(e); sctx.beginPath(); sctx.moveTo(x, y); };
-      c.onpointermove = e => { if (!drawing) return; const [x, y] = pos(e); sctx.lineTo(x, y); sctx.stroke(); };
+      c.onpointerdown = e => { drawing = true; c.setPointerCapture?.(e.pointerId); const [x, y] = pos(e); sctx.beginPath(); sctx.moveTo(x, y); };
+      c.onpointermove = e => { if (!drawing) return; const [x, y] = pos(e); sctx.lineTo(x, y); sctx.stroke(); hasSignatureStroke = true; };
       c.onpointerup = c.onpointerleave = () => drawing = false;
     }
-    function clearSign() { if (sctx) { const c = document.getElementById('signatureCanvas'); const dpr = window.devicePixelRatio || 1; sctx.clearRect(0, 0, c.width / dpr, c.height / dpr); } }
+    function clearSign() {
+      if (sctx) {
+        const c = document.getElementById('signatureCanvas');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = c.width / dpr, h = c.height / dpr;
+        sctx.clearRect(0, 0, w, h);
+        sctx.fillStyle = '#FFFFFF';
+        sctx.fillRect(0, 0, w, h);
+        hasSignatureStroke = false;
+      }
+    }
 
     function isCanvasBlank(canvas) {
-      const blank = document.createElement('canvas');
-      blank.width = canvas.width; blank.height = canvas.height;
-      return canvas.toDataURL() === blank.toDataURL();
+      if (!canvas || !hasSignatureStroke) return true;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return !hasSignatureStroke;
+      const px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      for (let i = 0; i < px.length; i += 4) {
+        if (px[i] < 250 || px[i + 1] < 250 || px[i + 2] < 250) return false;
+      }
+      return true;
+    }
+
+    function exportSignature(canvas, quality = 0.82) {
+      const out = document.createElement('canvas');
+      out.width = canvas.width;
+      out.height = canvas.height;
+      const outCtx = out.getContext('2d');
+      if (!outCtx) return canvas.toDataURL('image/jpeg', quality);
+      outCtx.fillStyle = '#FFFFFF';
+      outCtx.fillRect(0, 0, out.width, out.height);
+      outCtx.drawImage(canvas, 0, 0);
+      return out.toDataURL('image/jpeg', quality);
     }
 
     async function submitReceive() {
@@ -2282,7 +2336,7 @@
       rdConfirmState = false;
       const canvas = document.getElementById('signatureCanvas');
       let sig = '';
-      try { sig = (canvas && !isCanvasBlank(canvas)) ? canvas.toDataURL('image/jpeg', 0.6) : ''; } catch (e) { toast('ไม่สามารถบันทึกลายเซ็นได้ กรุณาลองใหม่'); return; }
+      try { sig = (canvas && !isCanvasBlank(canvas)) ? exportSignature(canvas) : ''; } catch (e) { toast('ไม่สามารถบันทึกลายเซ็นได้ กรุณาลองใหม่'); return; }
       if (sig && sig.length > 200000) {
         toast('ลายเซ็นมีขนาดใหญ่เกินไป กรุณาล้างแล้ววาดใหม่');
         if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; lucide.createIcons(); }
@@ -3171,8 +3225,8 @@
               <input type="text" id="vtConfirmerName" placeholder="ชื่อ-นามสกุล ผู้รับเอกสาร"
                 class="gd-input mb-3">
               <label class="text-xs font-medium text-gray-500 mb-1.5 block">ลายเซ็น</label>
-              <div class="relative border border-gray-200 rounded-lg overflow-hidden bg-gray-50/50">
-                <canvas id="signatureCanvas" width="400" height="160" class="w-full" style="height:140px;"></canvas>
+              <div class="signature-pad">
+                <canvas id="signatureCanvas" width="400" height="160" class="w-full signature-pad__canvas" style="height:140px;"></canvas>
                 <button onclick="clearSign()" class="absolute top-2 right-2 px-2.5 py-1 bg-white rounded-md text-xs text-gray-400 hover:text-gray-600 card-shadow transition">ล้าง</button>
               </div>
             </div>
@@ -3214,7 +3268,7 @@
       btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> กำลังบันทึก...'; lucide.createIcons();
       const canvas = document.getElementById('signatureCanvas');
       let sig = '';
-      try { sig = (canvas && !isCanvasBlank(canvas)) ? canvas.toDataURL('image/jpeg', 0.6) : ''; } catch(e) {}
+      try { sig = (canvas && !isCanvasBlank(canvas)) ? exportSignature(canvas) : ''; } catch(e) {}
       if (sig && sig.length > 200000) { toast('ลายเซ็นมีขนาดใหญ่เกินไป กรุณาล้างแล้ววาดใหม่'); btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; lucide.createIcons(); return; }
       const now = new Date();
       const ts = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()+543} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
