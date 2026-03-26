@@ -235,9 +235,15 @@
 
     canvas#signatureCanvas {
       touch-action: none;
+      -ms-touch-action: none;
+      pointer-events: auto;
+      position: relative;
+      z-index: 2;
       background: #fff;
       border-radius: 12px;
       display: block;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     .signature-pad {
@@ -249,6 +255,7 @@
     }
 
     .signature-pad__frame {
+      position: relative;
       border: 1px dashed #CBD5E1;
       border-radius: 12px;
       background: #FFFFFF;
@@ -1596,6 +1603,8 @@
     let CPB = '', CP_STEP = 1, CP_NEW = '';
     let RF = '', HF = '', GF = '', SQ = '', HT = 'dash';
     let CP = null, drawing = false, lx = 0, ly = 0, sctx = null, DM = 'select', hasSignatureStroke = false;
+    let signatureCanvasEl = null, signatureResizeBound = false;
+    let signatureListenersCleanup = null, signatureResizeRaf = 0;
     let DC = null, MC = null, docCount = 1;
 
     // avatar colors
@@ -2278,35 +2287,135 @@
 
     function togDoc(i, v) { if (CP) { CP.checked[i] = v; } }
 
-    function initSign() {
-      const c = document.getElementById('signatureCanvas'); if (!c) return;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const r = c.getBoundingClientRect();
-      if (r.width === 0 || r.height === 0) { requestAnimationFrame(initSign); return; }
-      c.width = Math.round(r.width * dpr);
-      c.height = Math.round(r.height * dpr);
-      sctx = c.getContext('2d');
+    function getSignaturePoint(canvas, e) {
+      const rc = canvas.getBoundingClientRect();
+      const src = e.touches?.[0] ?? e.changedTouches?.[0] ?? e;
+      return [src.clientX - rc.left, src.clientY - rc.top];
+    }
+
+    function drawStart(canvas, e) {
       if (!sctx) return;
-      sctx.scale(dpr, dpr);
+      if (e.cancelable) e.preventDefault();
+      drawing = true;
+      if (typeof e.pointerId === 'number' && canvas.setPointerCapture) {
+        canvas.setPointerCapture(e.pointerId);
+      }
+      const [x, y] = getSignaturePoint(canvas, e);
+      sctx.beginPath();
+      sctx.moveTo(x, y);
+    }
+
+    function drawMove(canvas, e) {
+      if (!sctx || !drawing) return;
+      if (e.cancelable) e.preventDefault();
+      const [x, y] = getSignaturePoint(canvas, e);
+      sctx.lineTo(x, y);
+      sctx.stroke();
+      hasSignatureStroke = true;
+    }
+
+    function drawEnd(canvas, e) {
+      if (e?.cancelable) e.preventDefault();
+      drawing = false;
+      if (typeof e?.pointerId === 'number' && canvas.releasePointerCapture) {
+        try { canvas.releasePointerCapture(e.pointerId); } catch (_) { }
+      }
+    }
+
+    function sizeSignatureCanvas(canvas, { preserve = true } = {}) {
+      if (!canvas) return;
+      const cssWidth = canvas.offsetWidth;
+      const cssHeight = canvas.offsetHeight;
+      if (!cssWidth || !cssHeight) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const nextWidth = Math.round(cssWidth * dpr);
+      const nextHeight = Math.round(cssHeight * dpr);
+      if (canvas.width === nextWidth && canvas.height === nextHeight && sctx) return;
+
+      let backup = null;
+      if (preserve && canvas.width > 0 && canvas.height > 0) {
+        backup = document.createElement('canvas');
+        backup.width = canvas.width;
+        backup.height = canvas.height;
+        const bctx = backup.getContext('2d');
+        if (bctx) bctx.drawImage(canvas, 0, 0);
+      }
+
+      canvas.width = nextWidth;
+      canvas.height = nextHeight;
+      sctx = canvas.getContext('2d');
+      if (!sctx) return;
+      sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       sctx.imageSmoothingEnabled = true;
       sctx.imageSmoothingQuality = 'high';
-      sctx.fillStyle = '#FFFFFF';
-      sctx.fillRect(0, 0, r.width, r.height);
       sctx.strokeStyle = '#1E293B';
-      sctx.lineWidth = Math.max(2, Math.min(2.5, r.width / 180));
+      sctx.lineWidth = Math.max(1, Math.min(2.5, cssWidth / 220));
       sctx.lineCap = 'round';
       sctx.lineJoin = 'round';
-      hasSignatureStroke = false;
-      const pos = e => { const rc = c.getBoundingClientRect(), src = e.touches?.[0] ?? e; return [src.clientX - rc.left, src.clientY - rc.top]; };
-      c.onpointerdown = e => { drawing = true; c.setPointerCapture?.(e.pointerId); const [x, y] = pos(e); sctx.beginPath(); sctx.moveTo(x, y); };
-      c.onpointermove = e => { if (!drawing) return; const [x, y] = pos(e); sctx.lineTo(x, y); sctx.stroke(); hasSignatureStroke = true; };
-      c.onpointerup = c.onpointerleave = () => drawing = false;
+      sctx.fillStyle = '#FFFFFF';
+      sctx.fillRect(0, 0, cssWidth, cssHeight);
+      if (backup) {
+        sctx.drawImage(backup, 0, 0, backup.width, backup.height, 0, 0, cssWidth, cssHeight);
+      } else {
+        hasSignatureStroke = false;
+      }
+    }
+
+    function bindSignatureEvents(canvas) {
+      if (signatureListenersCleanup) signatureListenersCleanup();
+      const listenerOpts = { passive: false };
+      const handlers = [
+        ['mousedown', e => drawStart(canvas, e)],
+        ['mousemove', e => drawMove(canvas, e)],
+        ['mouseup', e => drawEnd(canvas, e)],
+        ['mouseleave', e => drawEnd(canvas, e)],
+        ['touchstart', e => drawStart(canvas, e)],
+        ['touchmove', e => drawMove(canvas, e)],
+        ['touchend', e => drawEnd(canvas, e)],
+        ['touchcancel', e => drawEnd(canvas, e)],
+        ['pointerdown', e => drawStart(canvas, e)],
+        ['pointermove', e => drawMove(canvas, e)],
+        ['pointerup', e => drawEnd(canvas, e)],
+        ['pointercancel', e => drawEnd(canvas, e)]
+      ];
+      handlers.forEach(([evt, fn]) => canvas.addEventListener(evt, fn, listenerOpts));
+      signatureListenersCleanup = () => {
+        handlers.forEach(([evt, fn]) => canvas.removeEventListener(evt, fn, listenerOpts));
+        signatureListenersCleanup = null;
+      };
+    }
+
+    function initSign() {
+      const c = document.getElementById('signatureCanvas');
+      if (!c) return;
+      if (c.offsetWidth === 0 || c.offsetHeight === 0) { requestAnimationFrame(initSign); return; }
+      signatureCanvasEl = c;
+      c.style.pointerEvents = 'auto';
+      c.style.touchAction = 'none';
+      c.style.position = 'relative';
+      c.style.zIndex = '2';
+      const frame = c.closest('.signature-pad__frame');
+      if (frame) {
+        frame.style.position = 'relative';
+        frame.style.zIndex = '1';
+      }
+      sizeSignatureCanvas(c, { preserve: false });
+      bindSignatureEvents(c);
+
+      if (!signatureResizeBound) {
+        signatureResizeBound = true;
+        window.addEventListener('resize', () => {
+          if (!signatureCanvasEl) return;
+          cancelAnimationFrame(signatureResizeRaf);
+          signatureResizeRaf = requestAnimationFrame(() => sizeSignatureCanvas(signatureCanvasEl, { preserve: true }));
+        });
+      }
     }
     function clearSign() {
       if (sctx) {
         const c = document.getElementById('signatureCanvas');
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const w = c.width / dpr, h = c.height / dpr;
+        if (!c) return;
+        const w = c.offsetWidth, h = c.offsetHeight;
         sctx.clearRect(0, 0, w, h);
         sctx.fillStyle = '#FFFFFF';
         sctx.fillRect(0, 0, w, h);
