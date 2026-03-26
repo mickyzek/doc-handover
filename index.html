@@ -512,6 +512,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      min-height: 26px;
       padding: 5px 10px;
       border-radius: 999px;
       font-size: 11px;
@@ -574,6 +575,62 @@
       border: 1px solid #E2E8F0;
       padding: 4px 8px;
       border-radius: 999px;
+    }
+
+    .workflow-strip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      background: #F8FAFC;
+    }
+
+    .workflow-step {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #94A3B8;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .workflow-step.active {
+      color: #1E40AF;
+    }
+
+    .workflow-step.done {
+      color: #047857;
+    }
+
+    .workflow-divider {
+      flex: 1;
+      min-width: 24px;
+      height: 2px;
+      border-radius: 999px;
+      background: #E2E8F0;
+    }
+
+    .workflow-divider.done {
+      background: #BFDBFE;
+    }
+
+    .signal-kpi {
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      background: #FFFFFF;
+      padding: 12px;
+    }
+
+    .signal-kpi-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #64748B;
     }
 
     .toast-success { background: linear-gradient(135deg, #047857, #065F46); }
@@ -1824,6 +1881,12 @@
       const readyCount = pending.filter(p => p.status === 'ready').length;
       const partialCount = pending.filter(p => p.status === 'partial').length;
       const totalDocs = pending.reduce((n, p) => n + p.docs.length, 0);
+      const completionAvg = pending.length
+        ? Math.round(pending.reduce((sum, p) => {
+          const prog = p.checked.length ? (p.checked.filter(Boolean).length / p.checked.length) * 100 : 0;
+          return sum + prog;
+        }, 0) / pending.length)
+        : 0;
       const dc = {}; pending.forEach(p => { dc[p.dept] = (dc[p.dept] || 0) + 1; });
       const el = document.getElementById('tab-receive');
       el.innerHTML = `
@@ -1835,20 +1898,22 @@
       <p class="text-sm text-slate-500 mt-1">ตรวจสอบรายการเอกสารที่รอรับจากทุกแผนก</p>
     </div>
     <div class="gd-surface">
+    <div class="mb-3">${renderWorkflowStrip({ status: pending.length ? (partialCount ? 'partial' : 'ready') : 'done' })}</div>
     <div class="signal-grid">
-      <div class="gd-card-soft p-3">
-        <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Ready</p>
+      <div class="signal-kpi">
+        <p class="signal-kpi-label">Ready</p>
         <p class="text-lg font-bold text-blue-700 mt-1">${readyCount}</p>
       </div>
-      <div class="gd-card-soft p-3">
-        <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Partial</p>
+      <div class="signal-kpi">
+        <p class="signal-kpi-label">Partial</p>
         <p class="text-lg font-bold text-amber-700 mt-1">${partialCount}</p>
       </div>
-      <div class="gd-card-soft p-3">
-        <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Docs</p>
+      <div class="signal-kpi">
+        <p class="signal-kpi-label">Docs</p>
         <p class="text-lg font-bold text-slate-800 mt-1">${totalDocs}</p>
       </div>
     </div>
+    <p class="text-xs text-slate-500 mt-2 mb-3">ภาพรวมความครบถ้วนของ inbox ตอนนี้: <span class="font-semibold text-slate-700">${completionAvg}%</span></p>
     <div class="overflow-x-auto flex gap-2 pb-2" style="scrollbar-width:none;">
       <div class="chip ${RF === '' ? 'active' : ''}" onclick="setRF(this,'')">📋 ทั้งหมด <span class="badge-count inline-flex items-center justify-center ${RF === '' ? 'bg-white/30 text-white' : 'bg-brand text-white'} rounded-full ml-1">${pending.length}</span></div>
       ${Object.keys(dc).map(d => `<div class="chip ${RF === d ? 'active' : ''}" data-dept="${he(d)}" onclick="setRF(this, this.dataset.dept)">${dicon(d)} ${he(d.replace('ฝ่าย', ''))} <span class="badge-count inline-flex items-center justify-center bg-brand text-white rounded-full ml-1">${dc[d]}</span></div>`).join('')}
@@ -1904,7 +1969,8 @@
         el.innerHTML = `<div class="text-center py-14 flex flex-col items-center gap-3 fade-in gd-empty">
     <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center"><i data-lucide="inbox" class="w-8 h-8 text-slate-400"></i></div>
     <p class="font-semibold text-slate-600 text-sm">ไม่มีเอกสารรอรับในตอนนี้</p>
-    <p class="text-xs text-slate-400">${RF ? 'ตัวกรอง: ' + he(RF) : 'ทุกแผนก'} • สถานะพร้อมดำเนินการ</p>
+    <p class="text-xs text-slate-400">${RF ? 'ตัวกรอง: ' + he(RF) : 'ทุกแผนก'} • ระบบพร้อมรับรายการใหม่ทันที</p>
+    <p class="text-xs text-slate-400">เมื่อ GA สร้างแผนใหม่ รายการจะปรากฏที่หน้านี้อัตโนมัติ</p>
   </div>`; return;
       }
       el.innerHTML = list.map(p => {
@@ -1925,9 +1991,11 @@
         ${tot ? `<span class="meta-chip"><i data-lucide="banknote" class="w-3 h-3"></i>฿${fa(tot)}</span>` : ''}
         ${p.status === 'partial' ? `<span class="meta-chip"><i data-lucide="activity" class="w-3 h-3"></i>รับแล้ว ${prog}%</span>` : ''}
       </div>
+      <div class="mt-3">${renderWorkflowStrip(p)}</div>
       ${p.status === 'partial' ? `<div class="mt-2 h-1.5 bg-amber-100 rounded-full overflow-hidden"><div class="h-full bg-amber-500 rounded-full" style="width:${prog}%"></div></div>` : ''}
     </div>`;
       }).join('');
+      lucide.createIcons();
     }
 
     async function openReceiveDetail(id) {
@@ -2227,7 +2295,8 @@
         </div>`;
       }).join('') : `<div class="text-center py-12 text-slate-500 text-sm gd-empty fade-in">
       <div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-2"><i data-lucide="search-x" class="w-5 h-5 text-slate-400"></i></div>
-      ไม่พบข้อมูลที่ตรงกับตัวกรองหรือคำค้นหา
+      <p class="font-semibold text-slate-600 mb-1">ไม่พบข้อมูลที่ตรงกับตัวกรองหรือคำค้นหา</p>
+      <p class="text-xs text-slate-400">ลองล้างตัวกรองแผนก/ผู้สร้าง หรือค้นหาด้วยเลขเอกสาร</p>
     </div>`}
     </div>`;
 
@@ -2399,10 +2468,10 @@
       ${Object.entries(dm).map(([dept, v]) => { const max = Math.max(...Object.values(dm).map(x => x.total), 1); return `<div class="mb-3"><div class="flex justify-between text-xs mb-1"><span class="text-gray-600">${dicon(dept)} ${he(dept)}</span><span class="font-semibold text-gray-900">${v.total}</span></div><div class="h-2 bg-gray-100 rounded-full overflow-hidden"><div class="h-full rounded-full" style="width:${Math.round(v.total / max * 100)}%;background:linear-gradient(to right,#0F6E56 ${Math.round(v.done / v.total * 100)}%,#D97706 ${Math.round(v.done / v.total * 100)}% ${Math.round((v.done + v.partial) / v.total * 100)}%,#185FA5 ${Math.round((v.done + v.partial) / v.total * 100)}%)"></div></div></div>`; }).join('')}
     </div>
     <h4 class="font-semibold text-gray-900 text-sm mb-3 px-1">แผนที่ยังค้างอยู่</h4>
-    ${PLANS.filter(p => p.status !== 'done').map(p => `<div class="gd-card p-4 mb-3 cursor-pointer hover:shadow-md transition" data-id="${he(p.id)}" onclick="openBatch(this.dataset.id)">
+    ${PLANS.filter(p => p.status !== 'done').length ? PLANS.filter(p => p.status !== 'done').map(p => `<div class="gd-card p-4 mb-3 cursor-pointer hover:shadow-md transition" data-id="${he(p.id)}" onclick="openBatch(this.dataset.id)">
       <div class="flex items-start justify-between mb-1"><p class="font-semibold text-gray-900 text-sm">${he(p.name)}</p>${statusBadge(p.status)}</div>
       <p class="text-xs text-gray-400">${he(p.dept)} • ${he(p.createdBy.split(' ')[0])} • ${fd(p.date)}</p>
-    </div>`).join('')}`;
+    </div>`).join('') : `<div class="gd-empty text-center p-6 text-slate-500"><div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-2"><i data-lucide="shield-check" class="w-5 h-5 text-slate-400"></i></div><p class="font-semibold text-slate-600 mb-1">ไม่มีงานค้างในระบบ</p><p class="text-xs text-slate-400">ทุกแผนถูกปิดงานเรียบร้อยแล้ว</p></div>`}`;
 
       setTimeout(() => {
         const c = document.getElementById('mgrDonutC'); if (!c || !window.Chart) return;
@@ -2541,12 +2610,41 @@
     }
 
     // ===== UTILS =====
-    function statusTh(s) { return { ready: 'Ready', partial: 'Partial', done: 'Completed', left: 'In progress', expired: 'Expired', cancelled: 'Cancelled' }[s] || s; }
-    function statusLabelTh(s) { return { ready: 'รอรับ', partial: 'รับบางส่วน', done: 'เสร็จสมบูรณ์', left: 'กำลังดำเนินการ', expired: 'หมดอายุ', cancelled: 'ยกเลิก' }[s] || s; }
-    function statusStyle(s) { return { ready: 'status-ready', partial: 'status-partial', done: 'status-done', left: 'status-left', expired: 'status-expired', cancelled: 'status-cancelled' }[s] || 'status-expired'; }
-    function statusDotColor(s) { return { ready: 'bg-blue-500', partial: 'bg-amber-500', done: 'bg-emerald-500', left: 'bg-violet-500', expired: 'bg-slate-400', cancelled: 'bg-red-500' }[s] || 'bg-slate-400'; }
+    function statusMeta(s) {
+      return {
+        ready: { en: 'Ready', th: 'รอรับ', style: 'status-ready', dot: 'bg-blue-500', icon: 'circle-dot' },
+        partial: { en: 'Partial', th: 'รับบางส่วน', style: 'status-partial', dot: 'bg-amber-500', icon: 'pie-chart' },
+        done: { en: 'Completed', th: 'เสร็จสมบูรณ์', style: 'status-done', dot: 'bg-emerald-500', icon: 'check-circle-2' },
+        left: { en: 'In progress', th: 'กำลังดำเนินการ', style: 'status-left', dot: 'bg-violet-500', icon: 'loader' },
+        expired: { en: 'Expired', th: 'หมดอายุ', style: 'status-expired', dot: 'bg-slate-400', icon: 'clock-3' },
+        cancelled: { en: 'Cancelled', th: 'ยกเลิก', style: 'status-cancelled', dot: 'bg-red-500', icon: 'ban' }
+      }[s] || { en: s || '-', th: s || '-', style: 'status-expired', dot: 'bg-slate-400', icon: 'help-circle' };
+    }
+    function statusTh(s) { return statusMeta(s).en; }
+    function statusLabelTh(s) { return statusMeta(s).th; }
+    function statusStyle(s) { return statusMeta(s).style; }
+    function statusDotColor(s) { return statusMeta(s).dot; }
     function statusBadge(s) {
-      return `<span class="status-badge ${statusStyle(s)}"><span class="status-dot ${statusDotColor(s)}"></span>${statusLabelTh(s)}</span>`;
+      const meta = statusMeta(s);
+      return `<span class="status-badge ${meta.style}"><i data-lucide="${meta.icon}" class="w-3.5 h-3.5"></i><span class="status-dot ${meta.dot}"></span>${meta.th}</span>`;
+    }
+    function workflowState(p) {
+      const st = p?.status || 'ready';
+      if (st === 'cancelled') return { ready: true, receive: false, done: false, tone: 'cancelled' };
+      if (st === 'expired') return { ready: true, receive: true, done: false, tone: 'expired' };
+      if (st === 'done') return { ready: true, receive: true, done: true, tone: 'done' };
+      if (st === 'partial' || st === 'left') return { ready: true, receive: true, done: false, tone: st };
+      return { ready: true, receive: false, done: false, tone: 'ready' };
+    }
+    function renderWorkflowStrip(plan) {
+      const wf = workflowState(plan);
+      return `<div class="workflow-strip">
+        <span class="workflow-step ${wf.ready ? 'done' : ''}"><i data-lucide="package-check" class="w-3.5 h-3.5"></i>Ready</span>
+        <span class="workflow-divider ${wf.receive ? 'done' : ''}"></span>
+        <span class="workflow-step ${wf.receive ? (wf.tone === 'done' ? 'done' : 'active') : ''}"><i data-lucide="scan-search" class="w-3.5 h-3.5"></i>Receive</span>
+        <span class="workflow-divider ${wf.done ? 'done' : ''}"></span>
+        <span class="workflow-step ${wf.done ? 'done' : ''}"><i data-lucide="${wf.tone === 'cancelled' ? 'ban' : wf.tone === 'expired' ? 'clock-3' : 'badge-check'}" class="w-3.5 h-3.5"></i>${wf.tone === 'cancelled' ? 'Cancelled' : wf.tone === 'expired' ? 'Expired' : 'Complete'}</span>
+      </div>`;
     }
     function renderStatusInto(id, s) {
       const el = document.getElementById(id);
