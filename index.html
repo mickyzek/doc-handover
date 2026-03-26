@@ -256,6 +256,16 @@
       border-radius: 12px;
     }
 
+    .signature-preview {
+      width: 100%;
+      aspect-ratio: 5 / 2;
+      object-fit: contain;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      display: block;
+    }
+
     ::-webkit-scrollbar {
       width: 0;
       height: 0;
@@ -2228,7 +2238,7 @@
       <h4 class="font-semibold text-gray-900 text-base mb-4 flex items-center gap-2"><i data-lucide="pen-tool" class="w-4 h-4 gd-icon-accent"></i> ลงนามผู้รับ</h4>
       <label class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 block">ชื่อผู้รับเอกสาร</label>
       <input type="text" id="signerName" placeholder="พิมพ์ชื่อผู้รับ" value="${he(p.signer)}" class="gd-input mb-4">
-      ${SIGDATA[p.id] ? `<label class="text-xs font-medium text-gray-500 mb-1 block">ลายเซ็นครั้งก่อน (${he(p.signer)})</label><div class="signature-pad mb-3"><img src="${SIGDATA[p.id]}" style="width:100%;height:72px;object-fit:contain;background:#fff;border:1px solid #e2e8f0;border-radius:12px;"></div>` : ''}
+      ${SIGDATA[p.id] ? `<label class="text-xs font-medium text-gray-500 mb-1 block">ลายเซ็นครั้งก่อน (${he(p.signer)})</label><div class="signature-pad mb-3"><img src="${SIGDATA[p.id]}" class="signature-preview"></div>` : ''}
       <label class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 block">ลายเซ็นใหม่</label>
       <div class="signature-pad">
         <canvas id="signatureCanvas" width="400" height="160" class="w-full signature-pad__canvas" style="height:140px;"></canvas>
@@ -2303,6 +2313,32 @@
       return true;
     }
 
+    function getSignatureBounds(canvas, threshold = 245) {
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return null;
+      const { width, height } = canvas;
+      const px = ctx.getImageData(0, 0, width, height).data;
+      let minX = width, minY = height, maxX = -1, maxY = -1;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const idx = (y * width + x) * 4;
+          if (px[idx] < threshold || px[idx + 1] < threshold || px[idx + 2] < threshold) {
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (maxX < minX || maxY < minY) return null;
+      return {
+        x: minX,
+        y: minY,
+        width: maxX - minX + 1,
+        height: maxY - minY + 1
+      };
+    }
+
     function exportSignature(canvas, quality = 0.82) {
       const out = document.createElement('canvas');
       out.width = canvas.width;
@@ -2311,7 +2347,20 @@
       if (!outCtx) return canvas.toDataURL('image/jpeg', quality);
       outCtx.fillStyle = '#FFFFFF';
       outCtx.fillRect(0, 0, out.width, out.height);
-      outCtx.drawImage(canvas, 0, 0);
+      const bounds = getSignatureBounds(canvas);
+      if (!bounds) {
+        outCtx.drawImage(canvas, 0, 0);
+        return out.toDataURL('image/jpeg', quality);
+      }
+      const pad = Math.round(Math.min(out.width, out.height) * 0.06);
+      const availW = Math.max(1, out.width - (pad * 2));
+      const availH = Math.max(1, out.height - (pad * 2));
+      const scale = Math.min(availW / bounds.width, availH / bounds.height);
+      const drawW = bounds.width * scale;
+      const drawH = bounds.height * scale;
+      const dx = (out.width - drawW) / 2;
+      const dy = (out.height - drawH) / 2;
+      outCtx.drawImage(canvas, bounds.x, bounds.y, bounds.width, bounds.height, dx, dy, drawW, drawH);
       return out.toDataURL('image/jpeg', quality);
     }
 
@@ -2766,7 +2815,7 @@
       if (p.signer) {
         setTimeout(() => {
           const sv = document.getElementById('sigView'); if (!sv) return;
-          if (hasSig) { const img = document.createElement('img'); img.src = hasSig; img.style.width = '100%'; img.style.height = '90px'; img.style.objectFit = 'contain'; sv.appendChild(img); }
+          if (hasSig) { const img = document.createElement('img'); img.src = hasSig; img.className = 'signature-preview'; sv.appendChild(img); }
           else { sv.innerHTML = `<div style="height:70px;display:flex;align-items:center;justify-content:center;font-style:italic;color:#185FA5;font-size:18px;">${he(p.signer)}</div>`; }
         }, 50);
       }
