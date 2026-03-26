@@ -301,9 +301,29 @@
       border-radius: 12px;
       background: #FFFFFF;
       padding: 12px;
+      isolation: isolate;
+      overflow: hidden;
+    }
+
+    .signature-pad__canvas-wrap {
+      position: relative;
+      z-index: 5;
+      pointer-events: auto;
+    }
+
+    .signature-pad__decoration {
+      position: absolute;
+      inset: 12px;
+      border-radius: 12px;
+      pointer-events: none;
+      z-index: 1;
+      background: linear-gradient(180deg, rgba(148, 163, 184, 0.06) 0%, rgba(148, 163, 184, 0) 32%);
     }
 
     .signature-pad__canvas {
+      position: relative;
+      z-index: 6;
+      pointer-events: auto;
       border: 1px solid #E2E8F0;
       background: #fff;
       border-radius: 12px;
@@ -2432,7 +2452,10 @@
           </button>
         </div>
         <div class="signature-pad__frame">
-          <canvas id="signatureCanvas" width="400" height="160" class="w-full signature-pad__canvas" style="height:140px;"></canvas>
+          <div class="signature-pad__decoration" aria-hidden="true"></div>
+          <div class="signature-pad__canvas-wrap">
+            <canvas id="signatureCanvas" width="400" height="160" class="w-full signature-pad__canvas" style="height:140px;"></canvas>
+          </div>
         </div>
         <p id="rdSignatureHint" class="field-warning hidden"><i data-lucide="alert-circle" class="w-3.5 h-3.5 mt-0.5 shrink-0"></i><span>กรุณาเซ็นลายเซ็นก่อนยืนยันรับเอกสาร</span></p>
         <p class="text-xs text-slate-500 mt-2">🔒 ลายเซ็นนี้ใช้เพื่อยืนยันการรับเอกสาร และถูกจัดเก็บอย่างปลอดภัยในระบบ</p>
@@ -2444,7 +2467,7 @@
     <button onclick="openLeaveModal()" class="w-full py-2.5 mt-3 gd-btn-secondary border-dashed border-amber-200 text-amber-700 hover:bg-amber-50 transition flex items-center justify-center gap-2">
       <i data-lucide="map-pin" class="w-4 h-4"></i> ไม่มีคนรับ — ฝากเอกสาร
     </button>`;
-      goScreen('receive-detail'); lucide.createIcons(); initSign();
+      goScreen('receive-detail'); lucide.createIcons(); initSign(); setTimeout(() => initSign(), 80);
     }
 
     function closeReceiveDetail() {
@@ -2581,20 +2604,45 @@
       return isReady;
     }
 
-    function initSign() {
+    function initSign(retries = 0) {
       const c = document.getElementById('signatureCanvas');
-      if (!c) return;
-      if (c.offsetWidth === 0 || c.offsetHeight === 0) { requestAnimationFrame(initSign); return; }
+      if (!c) {
+        signatureCanvasEl = null;
+        return;
+      }
+      if (c.offsetWidth === 0 || c.offsetHeight === 0) {
+        if (retries < 12) requestAnimationFrame(() => initSign(retries + 1));
+        return;
+      }
+
+      if (signatureCanvasEl && signatureCanvasEl !== c && signatureListenersCleanup) {
+        signatureListenersCleanup();
+      }
+
       signatureCanvasEl = c;
       c.style.pointerEvents = 'auto';
       c.style.touchAction = 'none';
       c.style.position = 'relative';
-      c.style.zIndex = '2';
+      c.style.zIndex = '6';
+
       const frame = c.closest('.signature-pad__frame');
       if (frame) {
         frame.style.position = 'relative';
         frame.style.zIndex = '1';
+        frame.style.pointerEvents = 'auto';
+        const decoLayers = frame.querySelectorAll('.signature-pad__decoration');
+        decoLayers.forEach((layer) => {
+          layer.style.pointerEvents = 'none';
+          layer.style.zIndex = '1';
+        });
       }
+      const canvasWrap = c.closest('.signature-pad__canvas-wrap');
+      if (canvasWrap) {
+        canvasWrap.style.position = 'relative';
+        canvasWrap.style.zIndex = '5';
+        canvasWrap.style.pointerEvents = 'auto';
+      }
+
       sizeSignatureCanvas(c, { preserve: false });
       bindSignatureEvents(c);
 
@@ -3604,7 +3652,10 @@
                   </button>
                 </div>
                 <div class="signature-pad__frame">
-                  <canvas id="signatureCanvas" width="400" height="160" class="w-full signature-pad__canvas" style="height:140px;"></canvas>
+                  <div class="signature-pad__decoration" aria-hidden="true"></div>
+                  <div class="signature-pad__canvas-wrap">
+                    <canvas id="signatureCanvas" width="400" height="160" class="w-full signature-pad__canvas" style="height:140px;"></canvas>
+                  </div>
                 </div>
                 <p id="vtSignatureHint" class="field-warning hidden"><i data-lucide="alert-circle" class="w-3.5 h-3.5 mt-0.5 shrink-0"></i><span>กรุณาเซ็นลายเซ็นก่อนยืนยันรับเอกสาร</span></p>
                 <p class="text-xs text-slate-500 mt-2">🔒 ลายเซ็นนี้ใช้เพื่อยืนยันการรับเอกสาร และถูกจัดเก็บอย่างปลอดภัยในระบบ</p>
@@ -3616,6 +3667,7 @@
             </button>`;
           lucide.createIcons();
           initSign();
+          setTimeout(() => initSign(), 80);
         }
       } catch(e) { toast('เกิดข้อผิดพลาด กรุณาลองใหม่'); }
       const numpadEl = document.getElementById('vtNumpad');
