@@ -415,6 +415,19 @@
       box-shadow: 0 18px 34px rgba(37, 99, 235, 0.38), 0 8px 16px rgba(6, 182, 212, 0.18);
     }
 
+    .gd-btn-primary:disabled,
+    .gd-btn-primary.is-disabled {
+      background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+      color: #e2e8f0;
+      border-color: rgba(148, 163, 184, 0.45);
+      opacity: 0.72;
+      box-shadow: none;
+      cursor: not-allowed;
+      transform: none;
+      filter: none;
+      pointer-events: none;
+    }
+
     .gd-btn-secondary {
       border: 1px solid #CBD5E1;
       background: #fff;
@@ -441,6 +454,30 @@
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: #64748B;
+    }
+
+    .required-mark {
+      color: #dc2626;
+      font-weight: 700;
+      margin-left: 2px;
+    }
+
+    .field-warning {
+      margin-top: 8px;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      padding: 8px 10px;
+      border: 1px solid #fde68a;
+      border-radius: 10px;
+      background: #fffbeb;
+      color: #92400e;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .field-warning.hidden {
+      display: none;
     }
 
     .ptr-indicator {
@@ -2295,12 +2332,13 @@
     <div class="gd-card p-6 mb-5">
       <h4 class="font-semibold text-gray-900 text-base mb-1 flex items-center gap-2"><i data-lucide="pen-tool" class="w-4 h-4 gd-icon-accent"></i> ลงนามผู้รับ</h4>
       <p class="text-xs text-slate-500 mb-4">Digital Signature</p>
-      <label class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 block">ชื่อผู้รับเอกสาร</label>
+      <label class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 block">ชื่อผู้รับเอกสาร <span class="required-mark">*</span></label>
       <input type="text" id="signerName" placeholder="พิมพ์ชื่อผู้รับ" value="${he(p.signer)}" class="gd-input mb-4">
+      <p id="rdNameHint" class="field-warning hidden"><i data-lucide="alert-circle" class="w-3.5 h-3.5 mt-0.5 shrink-0"></i><span>กรุณากรอกชื่อผู้รับ</span></p>
       ${SIGDATA[p.id] ? `<label class="text-xs font-medium text-gray-500 mb-1 block">ลายเซ็นครั้งก่อน (${he(p.signer)})</label><div class="signature-pad mb-3"><div class="signature-pad__frame"><img src="${SIGDATA[p.id]}" style="width:100%;height:88px;object-fit:contain;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px;"></div></div>` : ''}
       <div class="signature-pad">
         <div class="signature-pad__header">
-          <p class="signature-pad__title">ลายเซ็นใหม่</p>
+          <p class="signature-pad__title">ลายเซ็นใหม่ <span class="required-mark">*</span></p>
           <button type="button" onclick="clearSign()" class="signature-pad__clear" aria-label="ล้างลายเซ็น">
             <i data-lucide="eraser" class="w-3.5 h-3.5"></i> ล้าง
           </button>
@@ -2308,9 +2346,11 @@
         <div class="signature-pad__frame">
           <canvas id="signatureCanvas" width="400" height="160" class="w-full signature-pad__canvas" style="height:140px;"></canvas>
         </div>
+        <p id="rdSignatureHint" class="field-warning hidden"><i data-lucide="alert-circle" class="w-3.5 h-3.5 mt-0.5 shrink-0"></i><span>กรุณาเซ็นลายเซ็นก่อนยืนยันรับเอกสาร</span></p>
+        <p class="text-xs text-slate-500 mt-2">🔒 ลายเซ็นนี้ใช้เพื่อยืนยันการรับเอกสาร และถูกจัดเก็บอย่างปลอดภัยในระบบ</p>
       </div>
     </div>
-    <button onclick="submitReceive()" class="w-full py-3 bg-success text-white rounded-xl text-sm font-semibold hover:bg-emerald-800 transition flex items-center justify-center gap-2 card-shadow-md" id="rdConfirmBtn">
+    <button onclick="submitReceive()" class="w-full py-3 gd-btn-primary transition flex items-center justify-center gap-2 card-shadow-md is-disabled" id="rdConfirmBtn" disabled>
       <i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร
     </button>
     <button onclick="openLeaveModal()" class="w-full py-2.5 mt-3 gd-btn-secondary border-dashed border-amber-200 text-amber-700 hover:bg-amber-50 transition flex items-center justify-center gap-2">
@@ -2357,6 +2397,7 @@
       sctx.lineTo(x, y);
       sctx.stroke();
       hasSignatureStroke = true;
+      updateReceiveValidation();
     }
 
     function drawEnd(canvas, e) {
@@ -2430,6 +2471,28 @@
       };
     }
 
+    function getReceiveValidationState() {
+      const isTokenFlow = !!document.getElementById('vtConfirmerName');
+      const nameInput = document.getElementById(isTokenFlow ? 'vtConfirmerName' : 'signerName');
+      const confirmBtn = document.getElementById(isTokenFlow ? 'vtConfirmBtn' : 'rdConfirmBtn');
+      const nameHint = document.getElementById(isTokenFlow ? 'vtNameHint' : 'rdNameHint');
+      const signatureHint = document.getElementById(isTokenFlow ? 'vtSignatureHint' : 'rdSignatureHint');
+      return { isTokenFlow, nameInput, confirmBtn, nameHint, signatureHint };
+    }
+
+    function updateReceiveValidation() {
+      const { nameInput, confirmBtn, nameHint, signatureHint } = getReceiveValidationState();
+      if (!nameInput || !confirmBtn) return false;
+      const hasName = !!nameInput.value.trim();
+      const hasSignature = hasSignatureStroke;
+      const isReady = hasName && hasSignature;
+      confirmBtn.disabled = !isReady;
+      confirmBtn.classList.toggle('is-disabled', !isReady);
+      if (nameHint) nameHint.classList.toggle('hidden', hasName);
+      if (signatureHint) signatureHint.classList.toggle('hidden', hasSignature);
+      return isReady;
+    }
+
     function initSign() {
       const c = document.getElementById('signatureCanvas');
       if (!c) return;
@@ -2455,6 +2518,9 @@
           signatureResizeRaf = requestAnimationFrame(() => sizeSignatureCanvas(signatureCanvasEl, { preserve: true }));
         });
       }
+      const { nameInput } = getReceiveValidationState();
+      if (nameInput) nameInput.addEventListener('input', updateReceiveValidation);
+      updateReceiveValidation();
     }
     function clearSign() {
       if (sctx) {
@@ -2465,6 +2531,7 @@
         sctx.fillStyle = '#FFFFFF';
         sctx.fillRect(0, 0, w, h);
         hasSignatureStroke = false;
+        updateReceiveValidation();
       }
     }
 
@@ -2496,29 +2563,33 @@
 
     async function submitReceive() {
       const name = document.getElementById('signerName').value.trim();
-      if (!name) { toast('กรุณาใส่ชื่อผู้รับ'); return; }
+      const canvas = document.getElementById('signatureCanvas');
+      const hasSignature = !!(canvas && !isCanvasBlank(canvas));
+      if (!name) { toast('กรุณากรอกชื่อผู้รับ'); updateReceiveValidation(); return; }
+      if (!hasSignature) { toast('กรุณาเซ็นลายเซ็นก่อนยืนยันรับเอกสาร'); updateReceiveValidation(); return; }
       if (!CP.checked.some(Boolean)) { toast('กรุณาติ๊กอย่างน้อย 1 รายการ'); return; }
       const btn = document.getElementById('rdConfirmBtn');
+      if (!btn || btn.disabled) return;
       if (!rdConfirmState) {
         rdConfirmState = true;
         btn.innerHTML = '<i data-lucide="alert-triangle" class="w-4 h-4"></i> แตะอีกครั้งเพื่อยืนยัน';
-        btn.className = btn.className.replace('bg-success hover:bg-emerald-800', 'bg-warn hover:bg-amber-700');
+        btn.classList.add('bg-warn', 'hover:bg-amber-700');
+        btn.classList.remove('gd-btn-primary');
         lucide.createIcons();
         setTimeout(() => {
           if (rdConfirmState) {
             rdConfirmState = false;
-            if (btn) { btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; btn.className = btn.className.replace('bg-warn hover:bg-amber-700', 'bg-success hover:bg-emerald-800'); lucide.createIcons(); }
+            if (btn) { btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; btn.classList.remove('bg-warn', 'hover:bg-amber-700'); btn.classList.add('gd-btn-primary'); lucide.createIcons(); }
           }
         }, 3000);
         return;
       }
       rdConfirmState = false;
-      const canvas = document.getElementById('signatureCanvas');
       let sig = '';
       try { sig = (canvas && !isCanvasBlank(canvas)) ? exportSignature(canvas) : ''; } catch (e) { toast('ไม่สามารถบันทึกลายเซ็นได้ กรุณาลองใหม่'); return; }
       if (sig && sig.length > 200000) {
         toast('ลายเซ็นมีขนาดใหญ่เกินไป กรุณาล้างแล้ววาดใหม่');
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; lucide.createIcons(); }
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; lucide.createIcons(); updateReceiveValidation(); }
         return;
       }
       if (sig) SIGDATA[CP.id] = sig;
@@ -2534,7 +2605,7 @@
         sendNotify('plan_received', { plan_id: CP.id, plan_name: CP.name, dept: CP.dept, created_by: CP.createdBy, signer: name, signed_at: ts, status });
         toast(all ? 'Confirm สำเร็จ: รับเอกสารครบทุกฉบับแล้ว' : 'Receive สำเร็จ: บันทึกรับเอกสารบางส่วนแล้ว', 'success');
         closeReceiveDetail();
-      } catch (e) { console.error('[submitReceive]', e); toast('Receive ไม่สำเร็จ: บันทึกการรับเอกสารไม่สำเร็จ', 'error'); if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; btn.className = btn.className.replace('bg-warn hover:bg-amber-700', 'bg-success hover:bg-emerald-800'); lucide.createIcons(); } }
+      } catch (e) { console.error('[submitReceive]', e); toast('Receive ไม่สำเร็จ: บันทึกการรับเอกสารไม่สำเร็จ', 'error'); if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; btn.classList.remove('bg-warn', 'hover:bg-amber-700'); btn.classList.add('gd-btn-primary'); lucide.createIcons(); updateReceiveValidation(); } }
     }
 
     // ===== HISTORY TAB =====
@@ -3433,12 +3504,13 @@
             <div class="gd-card p-4 mb-4">
               <h4 class="font-semibold text-gray-900 text-sm mb-1 flex items-center gap-2"><i data-lucide="pen-tool" class="w-4 h-4 text-brand"></i> ลงนามผู้รับ</h4>
               <p class="text-xs text-slate-500 mb-3">Digital Signature</p>
-              <label class="text-xs font-medium text-gray-500 mb-1.5 block">ชื่อผู้รับเอกสาร</label>
+              <label class="text-xs font-medium text-gray-500 mb-1.5 block">ชื่อผู้รับเอกสาร <span class="required-mark">*</span></label>
               <input type="text" id="vtConfirmerName" placeholder="ชื่อ-นามสกุล ผู้รับเอกสาร"
                 class="gd-input mb-3">
+              <p id="vtNameHint" class="field-warning hidden"><i data-lucide="alert-circle" class="w-3.5 h-3.5 mt-0.5 shrink-0"></i><span>กรุณากรอกชื่อผู้รับ</span></p>
               <div class="signature-pad">
                 <div class="signature-pad__header">
-                  <p class="signature-pad__title">ลายเซ็น</p>
+                  <p class="signature-pad__title">ลายเซ็น <span class="required-mark">*</span></p>
                   <button type="button" onclick="clearSign()" class="signature-pad__clear" aria-label="ล้างลายเซ็น">
                     <i data-lucide="eraser" class="w-3.5 h-3.5"></i> ล้าง
                   </button>
@@ -3446,10 +3518,12 @@
                 <div class="signature-pad__frame">
                   <canvas id="signatureCanvas" width="400" height="160" class="w-full signature-pad__canvas" style="height:140px;"></canvas>
                 </div>
+                <p id="vtSignatureHint" class="field-warning hidden"><i data-lucide="alert-circle" class="w-3.5 h-3.5 mt-0.5 shrink-0"></i><span>กรุณาเซ็นลายเซ็นก่อนยืนยันรับเอกสาร</span></p>
+                <p class="text-xs text-slate-500 mt-2">🔒 ลายเซ็นนี้ใช้เพื่อยืนยันการรับเอกสาร และถูกจัดเก็บอย่างปลอดภัยในระบบ</p>
               </div>
             </div>
             <button onclick="confirmByToken()" id="vtConfirmBtn"
-              class="w-full py-3 bg-success text-white rounded-xl text-sm font-semibold hover:bg-emerald-800 transition flex items-center justify-center gap-2 card-shadow-md mb-6">
+              class="w-full py-3 gd-btn-primary transition flex items-center justify-center gap-2 card-shadow-md mb-6 is-disabled" disabled>
               <i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร
             </button>`;
           lucide.createIcons();
@@ -3466,28 +3540,32 @@
     async function confirmByToken() {
       if (!VT.plan) return;
       const name = document.getElementById('vtConfirmerName')?.value.trim();
-      if (!name) { toast('กรุณาระบุชื่อผู้รับเอกสาร'); return; }
+      const canvas = document.getElementById('signatureCanvas');
+      const hasSignature = !!(canvas && !isCanvasBlank(canvas));
+      if (!name) { toast('กรุณากรอกชื่อผู้รับ'); updateReceiveValidation(); return; }
+      if (!hasSignature) { toast('กรุณาเซ็นลายเซ็นก่อนยืนยันรับเอกสาร'); updateReceiveValidation(); return; }
       if (!VT.checked.some(Boolean)) { toast('กรุณาติ๊กอย่างน้อย 1 รายการ'); return; }
       const btn = document.getElementById('vtConfirmBtn');
+      if (!btn || btn.disabled) return;
       if (!vtConfirmState) {
         vtConfirmState = true;
         btn.innerHTML = '<i data-lucide="alert-triangle" class="w-4 h-4"></i> แตะอีกครั้งเพื่อยืนยัน';
-        btn.className = btn.className.replace('bg-success hover:bg-emerald-800', 'bg-warn hover:bg-amber-700');
+        btn.classList.add('bg-warn', 'hover:bg-amber-700');
+        btn.classList.remove('gd-btn-primary');
         lucide.createIcons();
         setTimeout(() => {
           if (vtConfirmState) {
             vtConfirmState = false;
-            if (btn) { btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; btn.className = btn.className.replace('bg-warn hover:bg-amber-700', 'bg-success hover:bg-emerald-800'); lucide.createIcons(); }
+            if (btn) { btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; btn.classList.remove('bg-warn', 'hover:bg-amber-700'); btn.classList.add('gd-btn-primary'); lucide.createIcons(); }
           }
         }, 3000);
         return;
       }
       vtConfirmState = false;
       btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> กำลังบันทึก...'; lucide.createIcons();
-      const canvas = document.getElementById('signatureCanvas');
       let sig = '';
       try { sig = (canvas && !isCanvasBlank(canvas)) ? exportSignature(canvas) : ''; } catch(e) {}
-      if (sig && sig.length > 200000) { toast('ลายเซ็นมีขนาดใหญ่เกินไป กรุณาล้างแล้ววาดใหม่'); btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; lucide.createIcons(); return; }
+      if (sig && sig.length > 200000) { toast('ลายเซ็นมีขนาดใหญ่เกินไป กรุณาล้างแล้ววาดใหม่'); btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; lucide.createIcons(); updateReceiveValidation(); return; }
       const now = new Date();
       const ts = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()+543} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
       try {
@@ -3514,7 +3592,7 @@
             </div>`;
           lucide.createIcons();
         }
-      } catch(e) { console.error('[confirmByToken]', e); toast('Confirm ไม่สำเร็จ: เกิดข้อผิดพลาด กรุณาลองใหม่', 'error'); btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; lucide.createIcons(); }
+      } catch(e) { console.error('[confirmByToken]', e); toast('Confirm ไม่สำเร็จ: เกิดข้อผิดพลาด กรุณาลองใหม่', 'error'); btn.disabled = false; btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> ยืนยันรับเอกสาร'; btn.classList.remove('bg-warn', 'hover:bg-amber-700'); btn.classList.add('gd-btn-primary'); lucide.createIcons(); updateReceiveValidation(); }
     }
 
     // ===== LEAVE FLOW =====
